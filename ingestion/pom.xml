@@ -12,6 +12,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spark.version>3.3.2</spark.version>
         <mongo.spark.connector.version>10.1.1</mongo.spark.connector.version>
+        <couchbase.spark.connector.version>3.5.1</couchbase.spark.connector.version>
     </properties>
     <dependencies>
         <!-- Spark Core and SQL -->
@@ -30,6 +31,11 @@
             <groupId>org.mongodb.spark</groupId>
             <artifactId>mongo-spark-connector_2.12</artifactId>
             <version>${mongo.spark.connector.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>spark-connector_2.13</artifactId>
+            <version>${couchbase.spark.connector.version}</version> <!-- latest Spark 3.x compatible -->
         </dependency>
     </dependencies>
 </project>

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=census
+    volumes:
+      - ./.local_docker_run/mongodb_data:/data/db
+    restart: unless-stopped
+    command: mongod --bind_ip_all
+
+  couchbase:
+    build: ./couchbase
+    container_name: couchbase
+    ports:
+      - 8091-8096:8091-8096
+      - 11210:11210
+    environment:
+      - CLUSTER_NAME=couchbase-demo
+      - COUCHBASE_ADMINISTRATOR_USERNAME=Administrator
+      - COUCHBASE_ADMINISTRATOR_PASSWORD=P@$$w0rd12
+      - COUCHBASE_BUCKET=census
+      - COUCHBASE_BUCKET_RAMSIZE=512
+      - COUCHBASE_RBAC_USERNAME=admin
+      - COUCHBASE_RBAC_PASSWORD=P@$$w0rd
+      - COUCHBASE_RBAC_NAME=admin
+      - COUCHBASE_RAM_SIZE=1024
+      - COUCHBASE_INDEX_RAM_SIZE=512
+    volumes:
+      - ./.local_docker_run/couchbase_data:/opt/couchbase/var
+    entrypoint: [""]
+    command: sh -c "/opt/couchbase/init/init-couchbase.sh"

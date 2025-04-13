@@ -1,40 +1,38 @@
 package com.ubb.master;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.StreamingQueryException;
+import org.apache.spark.sql.types.DataTypes;
 
-import java.util.concurrent.TimeoutException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class Main {
     public static void main(String[] args) {
-        // Create a Spark session configured to connect to a local MongoDB instance.
-        SparkSession spark = SparkSession.builder()
-                .appName("SparkCSVToMongoApp")
-                .master("local[*]")
-                .config("spark.mongodb.input.uri", "mongodb://localhost:27017/census.us_census")
-                .config("spark.mongodb.output.uri", "mongodb://localhost:27017/census.us_census")
-                .getOrCreate();
+        // Initialize Spark session for MongoDB
+        SparkSession mongoSpark = SparkConfig.createSparkSession("mongodb");
+        mongoSpark.udf().register("generateUUID", () -> java.util.UUID.randomUUID().toString(), DataTypes.StringType);
 
-        // Read data from CSV file into a DataFrame
-        Dataset<Row> csvData = spark.read()
-                .option("header", true)
-                .option("inferSchema", true)
-                .csv("data/us_census_2015.csv");
+        // Initialize Spark session for Couchbase
+        SparkSession couchbaseSpark = SparkConfig.createSparkSession("couchbase");
+        couchbaseSpark.udf().register("generateUUID", () -> java.util.UUID.randomUUID().toString(), DataTypes.StringType);
 
-        // Show the data schema and contents for validation
-        csvData.printSchema();
-        csvData.show();
+        // Execute MongoDB job
+        MongoDBJob mongoJob = new MongoDBJob(mongoSpark, "data/us_airline_dataset.csv", 1000);
+        mongoJob.execute();
 
-        // Save the DataFrame to MongoDB by writing using the 'mongo' format
-        csvData.write()
-                .format("mongodb")
-                .mode("append")
-                .option("database", "census")
-                .option("collection", "us_census")
-                .save();
+        // Execute Couchbase job
+        CouchbaseJob couchbaseJob = new CouchbaseJob(couchbaseSpark, "data/us_airline_dataset.csv", 1000);
+        couchbaseJob.execute();
 
-        spark.stop();
+        System.out.println("Press Enter to stop Spark sessions...");
+        try {
+            new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (IOException e) {
+            System.err.println("Error reading input: " + e.getMessage());
+        }
+
+        mongoSpark.stop();
+        couchbaseSpark.stop();
     }
 }

@@ -1,0 +1,17 @@
+couchbase:
+
+[METRIC] Throughput: 13837.945730372225 rows/s
+[METRIC] Time taken: 255760 ms
+[METRIC] Number of rows: 3539193
+[METRIC] Number of partitions: 15
+[METRIC] Memory used (before): 153 MB
+[METRIC] Memory used (after): 2923 MB
+
+mongo:
+
+[METRIC] Throughput: 6947.72705 rows/s
+[METRIC] Time taken: 509403 ms
+[METRIC] Number of rows: 3539193
+[METRIC] Number of partitions: 15
+[METRIC] Memory used (before): 71 MB
+[METRIC] Memory used (after): 239 MB

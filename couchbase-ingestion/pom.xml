@@ -29,7 +29,7 @@
         <!-- Couchbase Spark Connector -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>spark-connector_2.13</artifactId>
+            <artifactId>spark-connector_2.12</artifactId>
             <version>${couchbase.spark.connector.version}</version>
         </dependency>
     </dependencies>

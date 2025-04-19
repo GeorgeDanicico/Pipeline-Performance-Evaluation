@@ -15,7 +15,11 @@ public class MongoDBJob extends AbstractDatabaseJob {
         long usedMemoryBefore = runtime.totalMemory() - runtime.freeMemory();
         long startTime = System.currentTimeMillis();
 
-        Dataset<Row> csvData = readCSVData();
+//        Dataset<Row> csvData = readCSVData();
+//        long numRows = csvData.count();
+//        int numPartitions = csvData.rdd().getNumPartitions();
+
+        Dataset<Row> csvData = readParquetData();
         long numRows = csvData.count();
         int numPartitions = csvData.rdd().getNumPartitions();
 

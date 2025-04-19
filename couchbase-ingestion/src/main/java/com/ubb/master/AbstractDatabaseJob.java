@@ -23,9 +23,21 @@ public abstract class AbstractDatabaseJob {
                 .csv(csvPath);
     }
 
+    protected Dataset<Row> readParquetData() {
+        return spark.read()
+                .option("header", true)
+                .option("inferSchema", true)
+                .option("maxRowsPerRead", batchSize)
+                .parquet(csvPath);
+    }
+
     public abstract void execute();
 
     protected void printMetrics(long startTime, long endTime, long usedMemoryBefore, long usedMemoryAfter, long numRows, int numPartitions) {
+        var timeTaken = endTime - startTime;
+        var throughput = (double) numRows / (timeTaken / 1000.0); // rows per second
+
+        System.out.println("[METRIC] Throughput: " + throughput + " rows/s");
         System.out.println("[METRIC] Time taken: " + (endTime - startTime) + " ms");
         System.out.println("[METRIC] Number of rows: " + numRows);
         System.out.println("[METRIC] Number of partitions: " + numPartitions);

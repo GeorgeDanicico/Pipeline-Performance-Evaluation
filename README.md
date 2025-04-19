@@ -53,14 +53,14 @@ mvn clean package
 
 ```bash
 cd mongo-ingestion
-java -cp target/mongo-ingestion-1.0-SNAPSHOT.jar com.ubb.master.Main
+java -cp target/mongo-ingestion-1.0-SNAPSHOT.jar com.ubb.master.CouchbaseMain
 ```
 
 ### Couchbase Ingestion
 
 ```bash
 cd couchbase-ingestion
-java -cp target/couchbase-ingestion-1.0-SNAPSHOT.jar com.ubb.master.Main
+java -cp target/couchbase-ingestion-1.0-SNAPSHOT.jar com.ubb.master.CouchbaseMain
 ```
 
 ## Docker Setup

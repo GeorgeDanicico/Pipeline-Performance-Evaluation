@@ -7,12 +7,12 @@ public class SparkConfig {
         return SparkSession.builder()
                 .appName("SparkCSVToMongoDBApp")
                 .master("local[*]")
-                .config("spark.driver.cores", "1")
-                .config("spark.driver.memory", "2g")
-                .config("spark.executor.memory", "2g")
+                .config("spark.driver.cores", "4")
+                .config("spark.driver.memory", "3g")
+                .config("spark.executor.memory", "3g")
                 .config("spark.mongodb.input.uri", "mongodb://localhost:27017/census.us_census")
                 .config("spark.mongodb.output.uri", "mongodb://localhost:27017/census.us_census")
-                .config("spark.mongodb.output.maxBatchSize", "1000")
+                .config("spark.mongodb.output.maxBatchSize", 1000)
                 .getOrCreate();
     }
 }

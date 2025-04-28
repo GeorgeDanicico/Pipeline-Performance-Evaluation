@@ -4,9 +4,9 @@ import os
 import time
 from typing import Dict, Any
 
-from mongo_batch_writer import MongoBatchWriter
-from parquet_chunk_reader import ParquetChunkReader
-from resource_monitor import ResourceMonitor
+from writer.mongo_batch_writer import MongoBatchWriter
+from reader.parquet_chunk_reader import ParquetChunkReader
+from monitor.resource_monitor import ResourceMonitor
 
 logger = logging.getLogger(__name__)
 

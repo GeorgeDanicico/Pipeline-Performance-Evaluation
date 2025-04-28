@@ -1,7 +1,5 @@
-from data_pipeline import DataPipeline
-from mongo_batch_writer import MongoBatchWriter
-from parquet_chunk_reader import ParquetChunkReader
-from taxi_config import TaxiTripConfig
+from pipeline.data_pipeline import DataPipeline
+from config.taxi_config import TaxiTripConfig
 
 if __name__ == "__main__":
     pipeline = DataPipeline(

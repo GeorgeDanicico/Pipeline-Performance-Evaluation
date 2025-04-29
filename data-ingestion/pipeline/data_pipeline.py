@@ -4,6 +4,7 @@ import os
 import time
 from typing import Dict, Any
 
+from writer.couchbase_batch_writer import CouchbaseBatchWriter
 from writer.mongo_batch_writer import MongoBatchWriter
 from reader.parquet_chunk_reader import ParquetChunkReader
 from monitor.resource_monitor import ResourceMonitor
@@ -38,6 +39,7 @@ class DataPipeline:
         logger.info(f"Found {len(parquet_files)} files to process.")
 
         writer = MongoBatchWriter(**self.writer_kwargs)
+        # writer = CouchbaseBatchWriter(**self.writer_kwargs)
 
         for file_path in parquet_files:
             fname = os.path.basename(file_path)

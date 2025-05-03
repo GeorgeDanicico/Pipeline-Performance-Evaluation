@@ -1,0 +1,15 @@
+quarkus:
+  devservices:
+    enabled: false
+  mongodb:
+    connection-string: mongodb://localhost:27017
+    database: census
+    collection: nyc_taxi
+
+  couchbase:
+    connection-string: couchbase://localhost
+    username: Administrator
+    password: password
+    bucket-name: census
+    scope-name: nyc_taxi
+    collection-name: nyc_taxi

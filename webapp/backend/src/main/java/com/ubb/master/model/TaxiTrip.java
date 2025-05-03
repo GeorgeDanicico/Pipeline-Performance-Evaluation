@@ -1,10 +1,16 @@
 package com.ubb.master.model;
 
+import org.bson.codecs.pojo.annotations.BsonId;
 import org.bson.codecs.pojo.annotations.BsonProperty;
+import org.bson.types.ObjectId;
 
 import java.time.Instant;
 
 public class TaxiTrip {
+
+    @BsonId                    // marks this field as _id in BSON
+    @BsonProperty("_id")       // explicitly binds to the "_id" key
+    private ObjectId id;
 
     @BsonProperty("VendorID")
     private Integer vendorID;
@@ -70,6 +76,13 @@ public class TaxiTrip {
     public TaxiTrip() {}
 
     // Getters & Setters
+    public ObjectId getId() {
+        return id;
+    }
+
+    public void setId(ObjectId id) {
+        this.id = id;
+    }
 
     public Integer getVendorID() {
         return vendorID;

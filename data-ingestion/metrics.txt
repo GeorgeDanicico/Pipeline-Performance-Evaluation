@@ -1,0 +1,13 @@
+3 fisiere load in couchbase, in total 10 mil records:
+- 704.17s ingestion time
+- 2.9 gb used
+- primary index only
+
+- query dureaza 150 sec
+
+3 fisiere load in mongo, in total 10 mil records:
+- 112.6 s, aproape de 7 ori mai rapid ca si couchbase
+- 503.021568 mb used
+- 388.419584mb storage size
+
+- query dureaza 4 secunde ...

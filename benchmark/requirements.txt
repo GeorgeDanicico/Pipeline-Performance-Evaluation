@@ -1,0 +1,6 @@
+pymongo==4.6.1
+couchbase==4.2.1
+python-dotenv==1.0.0
+tqdm==4.66.1
+pandas==2.1.4
+matplotlib==3.8.2 

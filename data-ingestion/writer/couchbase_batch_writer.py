@@ -1,12 +1,15 @@
 import datetime
 import uuid
 import logging
+from asyncio import as_completed
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Any, Dict
 
 import numpy as np
 import pandas as pd
 from couchbase.cluster import Cluster, ClusterOptions
 from couchbase.auth import PasswordAuthenticator
+from couchbase.durability import DurabilityLevel
 from couchbase.exceptions import CouchbaseException
 
 logger = logging.getLogger(__name__)
@@ -52,17 +55,22 @@ class CouchbaseBatchWriter:
 
     def write(self, df: pd.DataFrame):
         """
-        Upserts each row in `df` into Couchbase.
+        Upserts each row in `df` into Couchbase using upsert_multi.
         Splits into sub-batches of size `self.batch_size`.
         """
         records = df.to_dict(orient="records")
         for start in range(0, len(records), self.batch_size):
-            sub_batch = records[start : start + self.batch_size]
+            sub_batch = records[start: start + self.batch_size]
+            kv_batch = {}
             for rec in sub_batch:
-                # generate unique key per doc; swap this out for a real ID field if you have one
-                key = f"{self.key_prefix}::{uuid.uuid4().hex}"
+                key = f"{uuid.uuid4().hex[:12]}"
                 serialized = self._serialize_record(rec)
-                try:
-                    self.collection.upsert(key, serialized)
-                except CouchbaseException as e:
-                    logger.error(f"Couchbase upsert failed for {key}: {e}")
+                kv_batch[key] = serialized
+
+            try:
+                result = self.collection.upsert_multi(kv_batch, durability=DurabilityLevel.NONE)
+                if not result.all_ok:
+                    for key, err in result.exceptions.items():
+                        logger.error(f"Failed upsert for {key}: {err}")
+            except CouchbaseException as e:
+                logger.error(f"Batch upsert failed: {e}")

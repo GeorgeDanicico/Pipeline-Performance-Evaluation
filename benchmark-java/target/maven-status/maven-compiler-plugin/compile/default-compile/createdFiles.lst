@@ -1,0 +1,6 @@
+com\benchmark\model\TaxiDocument.class
+com\benchmark\MongoDbBenchmarkApplication.class
+com\benchmark\benchmark\CouchbaseReadBenchmark.class
+com\benchmark\benchmark\MongoReadBenchmark.class
+com\benchmark\config\MongoConfig.class
+com\benchmark\config\CouchbaseConfig.class

@@ -38,8 +38,8 @@ class DataPipeline:
 
         logger.info(f"Found {len(parquet_files)} files to process.")
 
-        writer = MongoBatchWriter(**self.writer_kwargs)
-        # writer = CouchbaseBatchWriter(**self.writer_kwargs)
+        # writer = MongoBatchWriter(**self.writer_kwargs)
+        writer = CouchbaseBatchWriter(**self.writer_kwargs)
 
         for file_path in parquet_files:
             fname = os.path.basename(file_path)

@@ -1,243 +1,259 @@
 package com.example.ycsb;
 
+import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.jvm.*;
 import com.example.ycsb.DB;
 import com.example.ycsb.db.MongoDBClient;
 import com.example.ycsb.Status;
 import com.example.ycsb.ByteIterator;
 import com.example.ycsb.StringByteIterator;
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
-import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Properties;
-import java.util.Vector;
+import java.io.File;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class MongoDBBenchmark {
-    private static final Logger logger = LoggerFactory.getLogger(MongoDBBenchmark.class);
-    private final int recordCount;
-    private final int operationCount;
-    private final int threadCount;
-    private final MetricRegistry metrics;
-    private final ObjectMapper mapper;
-    private final WorkloadConfig workloadConfig;
-    private DB db;
+    private static final String HOST = "127.0.0.1";
+    private static final String DATABASE = "ycsb";
+    private static final String COLLECTION = "usertable";
+    private static final int RECORD_COUNT = 10000;
+    private static final int OPERATION_COUNT = 10000;
+    private static final int THREAD_COUNT = 1;
 
-    private MongoDBBenchmark(Builder builder) {
-        this.workloadConfig = builder.workloadConfig;
-        this.recordCount = builder.recordCount;
-        this.operationCount = builder.operationCount;
-        this.threadCount = builder.threadCount;
-        this.metrics = new MetricRegistry();
-        this.mapper = new ObjectMapper();
-        this.mapper.registerModule(new MetricsModule(TimeUnit.MILLISECONDS, TimeUnit.MILLISECONDS, false));
+    // Operation proportions
+    private static final double READ_PROPORTION = 0.95;
+    private static final double UPDATE_PROPORTION = 0.05;
+    private static final double INSERT_PROPORTION = 0;
+    private static final double SCAN_PROPORTION = 0;
+
+    private static final MetricRegistry metrics = new MetricRegistry();
+    private static final Timer readTimer = metrics.timer("read");
+    private static final Timer updateTimer = metrics.timer("update");
+    private static final Timer insertTimer = metrics.timer("insert");
+    private static final Timer scanTimer = metrics.timer("scan");
+    private static final Counter readCounter = metrics.counter("read.count");
+    private static final Counter updateCounter = metrics.counter("update.count");
+    private static final Counter insertCounter = metrics.counter("insert.count");
+    private static final Counter scanCounter = metrics.counter("scan.count");
+    private static final Counter errorCounter = metrics.counter("error.count");
+
+    // Add timers for total execution time
+    private static long readTotalTime = 0;
+    private static long updateTotalTime = 0;
+    private static long insertTotalTime = 0;
+    private static long scanTotalTime = 0;
+    private static long benchmarkStartTime = 0;
+
+    public static void main(String[] args) {
+        try {
+            // Register JVM metrics
+            metrics.register("jvm.gc", new GarbageCollectorMetricSet());
+            metrics.register("jvm.memory", new MemoryUsageGaugeSet());
+            metrics.register("jvm.threads", new ThreadStatesGaugeSet());
+            metrics.register("jvm.files", new FileDescriptorRatioGauge());
+
+            // Create workload
+            Properties props = new Properties();
+            props.setProperty("recordcount", String.valueOf(RECORD_COUNT));
+            props.setProperty("operationcount", String.valueOf(OPERATION_COUNT));
+            props.setProperty("fieldcount", "10");
+            props.setProperty("fieldlength", "100");
+            props.setProperty("readproportion", String.valueOf(READ_PROPORTION));
+            props.setProperty("updateproportion", String.valueOf(UPDATE_PROPORTION));
+            props.setProperty("scanproportion", String.valueOf(SCAN_PROPORTION));
+            props.setProperty("insertproportion", String.valueOf(INSERT_PROPORTION));
+            props.setProperty("requestdistribution", "zipfian");
+
+            // MongoDB specific properties
+            props.setProperty("mongodb.host", HOST);
+            props.setProperty("mongodb.database", DATABASE);
+            props.setProperty("mongodb.collection", COLLECTION);
+            props.setProperty("mongodb.timeout", "5000");
+
+            // Initialize components
+            Workload workload = new CoreWorkload();
+            workload.init(props);
+
+            DB db = new MongoDBClient();
+            db.setProperties(props);
+            db.init();
+
+            // Load phase
+//            System.out.println("Starting load phase...");
+//            loadData(db, workload, RECORD_COUNT);
+//            System.out.println("Load phase completed.");
+
+            // Run phase
+            System.out.println("Starting run phase...");
+            benchmarkStartTime = System.nanoTime();
+            runBenchmark(db, workload, OPERATION_COUNT, THREAD_COUNT);
+            System.out.println("Run phase completed.");
+
+            // Save metrics
+            saveMetrics();
+
+            // Cleanup
+            db.cleanup();
+            workload.cleanup();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public void run() throws Exception {
-        logger.info("Running MongoDB benchmark...");
-        
-        // Initialize MongoDB client
-        db = new MongoDBClient();
-        Properties props = new Properties();
-        props.setProperty("mongodb.host", System.getProperty("mongodb.host", "localhost"));
-        props.setProperty("mongodb.port", System.getProperty("mongodb.port", "27017"));
-        props.setProperty("mongodb.database", System.getProperty("mongodb.database", "ycsb"));
-        props.setProperty("mongodb.collection", System.getProperty("mongodb.collection", "usertable"));
-        props.setProperty("mongodb.username", System.getProperty("mongodb.username", ""));
-        props.setProperty("mongodb.password", System.getProperty("mongodb.password", ""));
-        props.setProperty("mongodb.timeout", System.getProperty("mongodb.timeout", "5000"));
-        props.setProperty("debug", System.getProperty("debug", "false"));
-        db.setProperties(props);
-        db.init();
+    private static void loadData(DB db, Workload workload, int recordCount) throws Exception {
+        for (int i = 0; i < recordCount; i++) {
+            String key = String.format("user%d", i);
+            HashMap<String, ByteIterator> values = new HashMap<>();
+            workload.insertInit(key, values);
+            Status status = db.insert("usertable", key, values);
+            if (status != Status.OK) {
+                System.err.println("Error inserting record: " + key);
+                errorCounter.inc();
+            }
+        }
+    }
 
-        // Create metrics
-        Timer readTimer = metrics.timer("read");
-        Timer updateTimer = metrics.timer("update");
-        Timer insertTimer = metrics.timer("insert");
-        Timer scanTimer = metrics.timer("scan");
-        Counter readCounter = metrics.counter("read.count");
-        Counter updateCounter = metrics.counter("update.count");
-        Counter insertCounter = metrics.counter("insert.count");
-        Counter scanCounter = metrics.counter("scan.count");
-        Meter readMeter = metrics.meter("read.ops");
-        Meter updateMeter = metrics.meter("update.ops");
-        Meter insertMeter = metrics.meter("insert.ops");
-        Meter scanMeter = metrics.meter("scan.ops");
-
-        // Run benchmark
+    private static void runBenchmark(DB db, Workload workload, int operationCount, int threadCount) throws Exception {
         for (int i = 0; i < operationCount; i++) {
-            String key = "user" + (i % recordCount);
+            String key = workload.nextTransactionKey();
+            if (key == null) {
+                break;
+            }
+
             double random = Math.random();
             double cumulative = 0.0;
 
-            if (random < (cumulative += workloadConfig.getReadProportion())) {
+            if (random < (cumulative += READ_PROPORTION)) {
                 // Read operation
                 Timer.Context context = readTimer.time();
                 try {
                     Status status = db.read("usertable", key, null, new HashMap<>());
                     if (status == Status.OK) {
                         readCounter.inc();
-                        readMeter.mark();
+                    } else {
+                        errorCounter.inc();
                     }
                 } finally {
-                    context.stop();
+                    long time = context.stop();
+                    readTotalTime += time;
                 }
-            } else if (random < (cumulative += workloadConfig.getUpdateProportion())) {
+            } else if (random < (cumulative += UPDATE_PROPORTION)) {
                 // Update operation
                 HashMap<String, ByteIterator> values = new HashMap<>();
-                values.put("field1", new StringByteIterator("newvalue1"));
-                values.put("field2", new StringByteIterator("newvalue2"));
-
+                workload.updateInit(key, values);
                 Timer.Context context = updateTimer.time();
                 try {
                     Status status = db.update("usertable", key, values);
                     if (status == Status.OK) {
                         updateCounter.inc();
-                        updateMeter.mark();
+                    } else {
+                        errorCounter.inc();
                     }
                 } finally {
-                    context.stop();
+                    long time = context.stop();
+                    updateTotalTime += time;
                 }
-            } else if (random < (cumulative += workloadConfig.getInsertProportion())) {
+            } else if (random < (cumulative += INSERT_PROPORTION)) {
                 // Insert operation
-                String newKey = "user" + (recordCount + i);
+                String newKey = "user" + (RECORD_COUNT + i);
                 HashMap<String, ByteIterator> values = new HashMap<>();
-                values.put("field1", new StringByteIterator("value1"));
-                values.put("field2", new StringByteIterator("value2"));
-
+                workload.insertInit(newKey, values);
                 Timer.Context context = insertTimer.time();
                 try {
                     Status status = db.insert("usertable", newKey, values);
                     if (status == Status.OK) {
                         insertCounter.inc();
-                        insertMeter.mark();
+                    } else {
+                        errorCounter.inc();
                     }
                 } finally {
-                    context.stop();
+                    long time = context.stop();
+                    insertTotalTime += time;
                 }
-            } else if (random < (cumulative += workloadConfig.getScanProportion())) {
+            } else if (random < (cumulative += SCAN_PROPORTION)) {
                 // Scan operation
                 Timer.Context context = scanTimer.time();
                 try {
                     Status status = db.scan("usertable", key, 10, null, new Vector<>());
                     if (status == Status.OK) {
                         scanCounter.inc();
-                        scanMeter.mark();
+                    } else {
+                        errorCounter.inc();
                     }
                 } finally {
-                    context.stop();
+                    long time = context.stop();
+                    scanTotalTime += time;
                 }
             }
         }
-
-        // Print metrics
-        ObjectNode metricsNode = mapper.createObjectNode();
-        metricsNode.put("read.latency.mean", readTimer.getSnapshot().getMean());
-        metricsNode.put("read.latency.p95", readTimer.getSnapshot().get95thPercentile());
-        metricsNode.put("read.latency.p99", readTimer.getSnapshot().get99thPercentile());
-        metricsNode.put("read.ops", readMeter.getCount());
-        metricsNode.put("read.count", readCounter.getCount());
-
-        metricsNode.put("update.latency.mean", updateTimer.getSnapshot().getMean());
-        metricsNode.put("update.latency.p95", updateTimer.getSnapshot().get95thPercentile());
-        metricsNode.put("update.latency.p99", updateTimer.getSnapshot().get99thPercentile());
-        metricsNode.put("update.ops", updateMeter.getCount());
-        metricsNode.put("update.count", updateCounter.getCount());
-
-        metricsNode.put("insert.latency.mean", insertTimer.getSnapshot().getMean());
-        metricsNode.put("insert.latency.p95", insertTimer.getSnapshot().get95thPercentile());
-        metricsNode.put("insert.latency.p99", insertTimer.getSnapshot().get99thPercentile());
-        metricsNode.put("insert.ops", insertMeter.getCount());
-        metricsNode.put("insert.count", insertCounter.getCount());
-
-        metricsNode.put("scan.latency.mean", scanTimer.getSnapshot().getMean());
-        metricsNode.put("scan.latency.p95", scanTimer.getSnapshot().get95thPercentile());
-        metricsNode.put("scan.latency.p99", scanTimer.getSnapshot().get99thPercentile());
-        metricsNode.put("scan.ops", scanMeter.getCount());
-        metricsNode.put("scan.count", scanCounter.getCount());
-
-        logger.info("Benchmark results:\n{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(metricsNode));
-
-        // Cleanup
-        db.cleanup();
     }
 
-    public static class Builder {
-        private WorkloadConfig workloadConfig = WorkloadConfig.createDefault(WorkloadType.READ_HEAVY);
-        private int recordCount = 1000;
-        private int operationCount = 10000;
-        private int threadCount = 1;
-
-        public Builder workloadConfig(WorkloadConfig config) {
-            this.workloadConfig = config;
-            return this;
-        }
-
-        public Builder recordCount(int count) {
-            this.recordCount = count;
-            return this;
-        }
-
-        public Builder operationCount(int count) {
-            this.operationCount = count;
-            return this;
-        }
-
-        public Builder threadCount(int count) {
-            this.threadCount = count;
-            return this;
-        }
-
-        public MongoDBBenchmark build() {
-            return new MongoDBBenchmark(this);
-        }
+    private static void saveMetrics() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> metricsMap = new HashMap<>();
+        
+        // Add timer metrics
+        metricsMap.put("read", getTimerStats(readTimer));
+        metricsMap.put("update", getTimerStats(updateTimer));
+        metricsMap.put("insert", getTimerStats(insertTimer));
+        metricsMap.put("scan", getTimerStats(scanTimer));
+        
+        // Add counter metrics
+        metricsMap.put("read.count", readCounter.getCount());
+        metricsMap.put("update.count", updateCounter.getCount());
+        metricsMap.put("insert.count", insertCounter.getCount());
+        metricsMap.put("scan.count", scanCounter.getCount());
+        metricsMap.put("error.count", errorCounter.getCount());
+        
+        // Add JVM metrics
+        metricsMap.put("jvm", getJvmMetrics());
+        
+        // Save to file
+        mapper.writerWithDefaultPrettyPrinter()
+              .writeValue(new File("metrics.json"), metricsMap);
+        
+        // Calculate total benchmark time
+        long totalBenchmarkTime = System.nanoTime() - benchmarkStartTime;
+        
+        // Print detailed console output
+        System.out.println("\n=== Benchmark Results ===");
+        System.out.println("\nTotal Execution Time:");
+        System.out.println("--------------------");
+        System.out.printf("Total Benchmark Time: %.2f seconds\n", totalBenchmarkTime / 1_000_000_000.0);
+        System.out.printf("Read Operations:      %.2f seconds\n", readTotalTime / 1_000_000_000.0);
+        System.out.printf("Update Operations:    %.2f seconds\n", updateTotalTime / 1_000_000_000.0);
+        System.out.printf("Insert Operations:    %.2f seconds\n", insertTotalTime / 1_000_000_000.0);
+        System.out.printf("Scan Operations:      %.2f seconds\n", scanTotalTime / 1_000_000_000.0);
+        
+        System.out.println("\nOperation Distribution:");
+        System.out.println("--------------------");
+        System.out.printf("Read Operations:   %d (%.1f%%)\n", readCounter.getCount(), (readCounter.getCount() * 100.0) / OPERATION_COUNT);
+        System.out.printf("Update Operations: %d (%.1f%%)\n", updateCounter.getCount(), (updateCounter.getCount() * 100.0) / OPERATION_COUNT);
+        System.out.printf("Insert Operations: %d (%.1f%%)\n", insertCounter.getCount(), (insertCounter.getCount() * 100.0) / OPERATION_COUNT);
+        System.out.printf("Scan Operations:   %d (%.1f%%)\n", scanCounter.getCount(), (scanCounter.getCount() * 100.0) / OPERATION_COUNT);
+        System.out.printf("Error Count:       %d\n", errorCounter.getCount());
     }
 
-    public static void main(String[] args) {
-        try {
-            // Get workload type from system property
-            String workloadTypeStr = System.getProperty("workload.type", "read_heavy");
-            WorkloadType workloadType;
-            WorkloadConfig workloadConfig;
+    private static Map<String, Object> getTimerStats(Timer timer) {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("count", timer.getCount());
+        stats.put("mean", timer.getSnapshot().getMean());
+        stats.put("p95", timer.getSnapshot().get95thPercentile());
+        stats.put("p99", timer.getSnapshot().get99thPercentile());
+        stats.put("max", timer.getSnapshot().getMax());
+        return stats;
+    }
 
-            try {
-                workloadType = WorkloadType.valueOf(workloadTypeStr.toUpperCase());
-                workloadConfig = WorkloadConfig.createDefault(workloadType);
-            } catch (IllegalArgumentException e) {
-                // Try to parse custom proportions
-                try {
-                    double readProp = Double.parseDouble(System.getProperty("workload.read", "0.5"));
-                    double updateProp = Double.parseDouble(System.getProperty("workload.update", "0.25"));
-                    double insertProp = Double.parseDouble(System.getProperty("workload.insert", "0.15"));
-                    double scanProp = Double.parseDouble(System.getProperty("workload.scan", "0.1"));
-                    workloadConfig = WorkloadConfig.createCustom(readProp, updateProp, insertProp, scanProp);
-                } catch (NumberFormatException ex) {
-                    logger.error("Invalid workload type or proportions");
-                    logger.error("Usage: -Dworkload.type=[read_heavy|write_heavy|read_only|write_only|mixed]");
-                    logger.error("Or use custom proportions:");
-                    logger.error("-Dworkload.read=<proportion>");
-                    logger.error("-Dworkload.update=<proportion>");
-                    logger.error("-Dworkload.insert=<proportion>");
-                    logger.error("-Dworkload.scan=<proportion>");
-                    return;
-                }
-            }
-
-            // Create and run benchmark
-            MongoDBBenchmark benchmark = new MongoDBBenchmark.Builder()
-                    .workloadConfig(workloadConfig)
-                    .build();
-
-            benchmark.run();
-        } catch (Exception e) {
-            logger.error("Error running benchmark", e);
-        }
+    private static Map<String, Object> getJvmMetrics() {
+        Map<String, Object> jvmMetrics = new HashMap<>();
+        Runtime runtime = Runtime.getRuntime();
+        jvmMetrics.put("memory.total", runtime.totalMemory());
+        jvmMetrics.put("memory.free", runtime.freeMemory());
+        jvmMetrics.put("memory.max", runtime.maxMemory());
+        jvmMetrics.put("threads.active", Thread.activeCount());
+        return jvmMetrics;
     }
 } 

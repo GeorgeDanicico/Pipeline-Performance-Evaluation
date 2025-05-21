@@ -1,4 +1,7 @@
-package com.example.ycsb;
+package com.ubb.master.ycsb.workload;
+
+import com.ubb.master.ycsb.iterator.ByteIterator;
+import com.ubb.master.ycsb.iterator.StringByteIterator;
 
 import java.util.HashMap;
 import java.util.Properties;
@@ -33,7 +36,7 @@ public class CoreWorkload implements Workload {
         recordCount = Integer.parseInt(p.getProperty(RECORD_COUNT_PROPERTY, "1000"));
         operationCount = Integer.parseInt(p.getProperty(OPERATION_COUNT_PROPERTY, "1000"));
         fieldCount = Integer.parseInt(p.getProperty(FIELD_COUNT_PROPERTY, "10"));
-        fieldLength = Integer.parseInt(p.getProperty(FIELD_LENGTH_PROPERTY, "100"));
+        fieldLength = Integer.parseInt(p.getProperty(FIELD_LENGTH_PROPERTY, "20"));
         readProportion = Double.parseDouble(p.getProperty(READ_PROPORTION_PROPERTY, "0.5"));
         updateProportion = Double.parseDouble(p.getProperty(UPDATE_PROPORTION_PROPERTY, "0.5"));
         insertProportion = Double.parseDouble(p.getProperty(INSERT_PROPORTION_PROPERTY, "0"));

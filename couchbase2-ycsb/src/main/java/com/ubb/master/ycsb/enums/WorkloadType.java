@@ -1,4 +1,4 @@
-package com.example.ycsb;
+package com.ubb.master.ycsb.enums;
 
 public enum WorkloadType {
     READ_HEAVY,

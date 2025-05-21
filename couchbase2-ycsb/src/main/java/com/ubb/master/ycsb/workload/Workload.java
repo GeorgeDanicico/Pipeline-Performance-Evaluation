@@ -1,4 +1,6 @@
-package com.example.ycsb;
+package com.ubb.master.ycsb.workload;
+
+import com.ubb.master.ycsb.iterator.ByteIterator;
 
 import java.util.HashMap;
 import java.util.Properties;

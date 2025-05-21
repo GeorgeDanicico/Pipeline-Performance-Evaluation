@@ -1,30 +1,26 @@
-package com.example.ycsb.db;
+package com.ubb.master.ycsb.db;
 
-import com.example.ycsb.DB;
-import com.example.ycsb.Status;
-import com.example.ycsb.ByteIterator;
-import com.example.ycsb.Status;
-import com.example.ycsb.ByteIterator;
-import com.example.ycsb.StringByteIterator;
-import com.mongodb.ConnectionString;
+import com.ubb.master.ycsb.enums.Status;
+import com.ubb.master.ycsb.iterator.ByteIterator;
+import com.ubb.master.ycsb.iterator.StringByteIterator;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.Binary;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import static java.lang.System.getProperties;
 
@@ -70,7 +66,7 @@ public class MongoDBClient implements DB {
 
         // Create indexes if they don't exist
         try {
-            this.collection.createIndex(new Document("_id", 1));
+//            this.collection.createIndex(new Document("_id", 1));
         } catch (MongoException e) {
             if (debug) {
                 e.printStackTrace();
@@ -183,11 +179,8 @@ public class MongoDBClient implements DB {
     @Override
     public Status insert(String table, String key, HashMap<String, ByteIterator> values) {
         try {
-            Document doc = new Document("_id", key);
-            
-            for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-                doc.append(entry.getKey(), entry.getValue().toString());
-            }
+            var doc = buildValues(values);
+            doc.append("_id", key);
 
             collection.insertOne(doc);
             return Status.OK;
@@ -211,6 +204,43 @@ public class MongoDBClient implements DB {
             }
             return Status.ERROR;
         }
+    }
+
+    private Document buildValues(HashMap<String, ByteIterator> values) {
+        Document doc = new Document();
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+            String fieldName = entry.getKey();
+            String fieldValue = entry.getValue().toString();
+            
+            // Convert the string value to Base64 encoded binary
+            byte[] bytes = fieldValue.getBytes(StandardCharsets.UTF_8);
+            String base64Value = Base64.getEncoder().encodeToString(bytes);
+            
+            // Create a Binary object with the Base64 encoded data
+            Binary binaryValue = new Binary((byte) 0, Base64.getDecoder().decode(base64Value));
+            doc.append(fieldName, binaryValue);
+        }
+        return doc;
+    }
+
+    private HashMap<String, ByteIterator> buildResult(Document doc) {
+        HashMap<String, ByteIterator> result = new HashMap<>();
+        for (Map.Entry<String, Object> entry : doc.entrySet()) {
+            if (entry.getKey().equals("_id")) {
+                continue;
+            }
+            
+            Object value = entry.getValue();
+            if (value instanceof Binary) {
+                // Convert Binary data back to string
+                Binary binary = (Binary) value;
+                String decodedValue = new String(binary.getData(), StandardCharsets.UTF_8);
+                result.put(entry.getKey(), new StringByteIterator(decodedValue));
+            } else {
+                result.put(entry.getKey(), new StringByteIterator(value.toString()));
+            }
+        }
+        return result;
     }
 
   @Override

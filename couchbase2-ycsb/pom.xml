@@ -12,9 +12,9 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <couchbase.version>2.7.16</couchbase.version>
+        <couchbase.version>3.7.0</couchbase.version>
         <metrics.version>4.2.12</metrics.version>
-      <mongodb.version>5.1.0</mongodb.version>
+        <mongodb.version>5.5.0</mongodb.version>
     </properties>
 
     <dependencies>
@@ -25,11 +25,19 @@
             <version>${couchbase.version}</version>
         </dependency>
 
-      <dependency>
-        <groupId>org.mongodb</groupId>
-        <artifactId>mongodb-driver-sync</artifactId>
-        <version>${mongodb.version}</version>
-      </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-bom</artifactId>
+            <version>5.5.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>${mongodb.version}</version>
+        </dependency>
 
         <!-- Metrics -->
         <dependency>
@@ -79,7 +87,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.example.ycsb.Couchbase2Benchmark</mainClass>
+                            <mainClass>com.ubb.master.ycsb.benchmark.CouchbaseBenchmark</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

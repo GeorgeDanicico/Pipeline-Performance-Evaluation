@@ -1,4 +1,6 @@
-package com.example.ycsb;
+package com.ubb.master.ycsb;
+
+import com.ubb.master.ycsb.enums.WorkloadType;
 
 public class WorkloadConfig {
     private final double readProportion;

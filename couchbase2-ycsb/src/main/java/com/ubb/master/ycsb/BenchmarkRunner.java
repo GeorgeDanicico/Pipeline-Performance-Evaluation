@@ -1,15 +1,21 @@
-package com.example.ycsb;
+package com.ubb.master.ycsb;
 
 import com.codahale.metrics.*;
 import com.codahale.metrics.Timer;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.CouchbaseCluster;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.ClusterOptions;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ubb.master.ycsb.db.CouchbaseClient;
+import com.ubb.master.ycsb.db.DB;
+import com.ubb.master.ycsb.enums.Status;
+import com.ubb.master.ycsb.iterator.ByteIterator;
+import com.ubb.master.ycsb.workload.CoreWorkload;
+import com.ubb.master.ycsb.workload.Workload;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.*;
 
 public class BenchmarkRunner {
@@ -162,13 +168,20 @@ public class BenchmarkRunner {
     public void run() {
         try {
             // Initialize Couchbase connection
-            CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
-                    .connectTimeout(30000)
-                    .kvTimeout(10000)
+            // Initialize Couchbase connection
+            ClusterEnvironment env = ClusterEnvironment.builder()
+                    .timeoutConfig(timeoutConfig -> timeoutConfig
+                            .connectTimeout(Duration.ofMillis(30000))
+                            .kvTimeout(Duration.ofMillis(10000)))
                     .build();
 
-            Cluster cluster = CouchbaseCluster.create(env, HOST);
-            Bucket bucket = cluster.openBucket(BUCKET_NAME, BUCKET_PASSWORD);
+            // Create cluster options
+            ClusterOptions options = ClusterOptions.clusterOptions(BUCKET_NAME, BUCKET_PASSWORD)
+                    .environment(env);
+
+            // Connect to cluster
+            Cluster cluster = Cluster.connect(HOST, options);
+            Bucket bucket = cluster.bucket(BUCKET_NAME);
 
             // Create workload
             Properties props = new Properties();
@@ -186,7 +199,7 @@ public class BenchmarkRunner {
             Workload workload = new CoreWorkload();
             workload.init(props);
 
-            DB db = new Couchbase2Client();
+            DB db = new CouchbaseClient();
             db.setProperties(props);
             db.init();
 

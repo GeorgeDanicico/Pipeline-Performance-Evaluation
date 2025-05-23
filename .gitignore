@@ -40,6 +40,7 @@ ENV/
 .local_docker_run/
 mongo-ingestion/target/
 couchbase-ingestion/target/
+couchbase2-ycsb/target/
 
 # Logs
 *.log

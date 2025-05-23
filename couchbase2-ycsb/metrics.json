@@ -1,15 +1,15 @@
 {
   "insert_latencies" : {
-    "p99" : 2.0242,
-    "min" : 0.7667,
-    "max" : 1317.1214,
-    "p90" : 1.3586,
-    "mean" : 1.24058347,
-    "p50" : 1.048,
-    "p75" : 1.1826
+    "p99" : 2.7384,
+    "min" : 0.775,
+    "max" : 84.3602,
+    "p90" : 1.2271,
+    "mean" : 1.073356515,
+    "p50" : 0.9798,
+    "p75" : 1.0781
   },
   "update_latencies" : { },
-  "load_phase_time_ms" : 12681.8636,
+  "load_phase_time_ms" : 110609.9098,
   "run_phase_time_ms" : 0.0,
   "read_latencies" : { },
   "scan_latencies" : { }

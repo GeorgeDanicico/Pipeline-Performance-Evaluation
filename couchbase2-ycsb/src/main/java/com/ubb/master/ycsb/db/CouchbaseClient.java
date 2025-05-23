@@ -99,18 +99,6 @@ public class CouchbaseClient implements DB {
                 return Status.NOT_FOUND;
             }
 
-            JsonObject content = getResult.contentAsObject();
-            if (fields != null) {
-                for (String field : fields) {
-                    if (content.containsKey(field)) {
-                        result.put(field, new StringByteIterator(content.getString(field)));
-                    }
-                }
-            } else {
-                for (String field : content.getNames()) {
-                    result.put(field, new StringByteIterator(content.getString(field)));
-                }
-            }
             return Status.OK;
         } catch (Exception e) {
             e.printStackTrace();

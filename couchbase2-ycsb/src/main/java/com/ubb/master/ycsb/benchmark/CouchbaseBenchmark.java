@@ -27,11 +27,11 @@ public class CouchbaseBenchmark {
     private static final String BUCKET_PASSWORD = "parola03";
     private static final int RECORD_COUNT = 10000;
     private static final int OPERATION_COUNT = 10000;
-    private static final int THREAD_COUNT = 1;
+    private static final int THREAD_COUNT = 4;
 
     // Operation proportions
-    private static final double READ_PROPORTION = 0.5;
-    private static final double UPDATE_PROPORTION = 0.5;
+    private static final double READ_PROPORTION = 0.05;
+    private static final double UPDATE_PROPORTION = 0.95;
     private static final double INSERT_PROPORTION = 0;
     private static final double SCAN_PROPORTION = 0;
 
@@ -64,6 +64,7 @@ public class CouchbaseBenchmark {
     private static final AtomicLong loadPhaseEndTime = new AtomicLong(0);
     private static final AtomicLong runPhaseStartTime = new AtomicLong(0);
     private static final AtomicLong runPhaseEndTime = new AtomicLong(0);
+    private static final AtomicLong generateTime = new AtomicLong(0);
 
     public static void main(String[] args) {
         try {
@@ -121,15 +122,15 @@ public class CouchbaseBenchmark {
             db.init();
 
             // Load phase
-            System.out.println("Starting load phase...");
-            loadData(db, workload, RECORD_COUNT);
-            System.out.println("Load phase completed.");
+//            System.out.println("Starting load phase...");
+//            loadData(db, workload, RECORD_COUNT);
+//            System.out.println("Load phase completed.");
 
             // Run phase
-//            System.out.println("Starting run phase...");
-//            benchmarkStartTime = System.nanoTime();
-//            runBenchmark(db, workload, OPERATION_COUNT, THREAD_COUNT);
-//            System.out.println("Run phase completed.");
+            System.out.println("Starting run phase...");
+            benchmarkStartTime = System.nanoTime();
+            runBenchmark(db, workload, OPERATION_COUNT, THREAD_COUNT);
+            System.out.println("Run phase completed.");
 
             // Save metrics
             saveMetrics();
@@ -160,11 +161,13 @@ public class CouchbaseBenchmark {
                     for (int j = startRecord; j < endRecord; j++) {
                         String key = String.format("user%d", j);
                         HashMap<String, ByteIterator> values = new HashMap<>();
-                        workload.insertInit(key, values);
+                        var timeRequiredToGenerate = workload.insertInit(key, values);
                         long startTime = System.nanoTime();
                         Status status = db.insert("usertable", key, values);
                         long endTime = System.nanoTime();
-                        insertLatencies.add(endTime - startTime);
+                        var latencyTime = endTime - startTime - timeRequiredToGenerate;
+                        insertLatencies.add(latencyTime);
+                        generateTime.addAndGet(timeRequiredToGenerate);
                         
                         if (status != Status.OK) {
                             System.err.println("Error inserting record: " + key);
@@ -184,7 +187,7 @@ public class CouchbaseBenchmark {
             thread.join();
         }
         
-        loadPhaseEndTime.set(System.nanoTime());
+        loadPhaseEndTime.set(System.nanoTime() - generateTime.get());
     }
 
     private static void runBenchmark(DB db, Workload workload, int operationCount, int threadCount) throws Exception {

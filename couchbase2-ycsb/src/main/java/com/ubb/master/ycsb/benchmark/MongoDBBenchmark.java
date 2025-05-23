@@ -24,13 +24,19 @@ public class MongoDBBenchmark {
     private static final String HOST = "127.0.0.1";
     private static final String DATABASE_NAME = "ycsb";
     private static final String COLLECTION_NAME = "usertable";
-    private static final int RECORD_COUNT = 10000;
-    private static final int OPERATION_COUNT = 10000;
+    private static final int RECORD_COUNT = 100000;
+    private static final int OPERATION_COUNT = 100000;
     private static final int THREAD_COUNT = 1;
 
     // Operation proportions
-    private static final double READ_PROPORTION = 0.5;
-    private static final double UPDATE_PROPORTION = 0.5;
+//   private static final double READ_PROPORTION = 0.5;
+//    private static final double UPDATE_PROPORTION = 0.5;
+//    private static final double READ_PROPORTION = 0.95;
+//    private static final double UPDATE_PROPORTION = 0.05;
+//    private static final double READ_PROPORTION = 1;
+//    private static final double UPDATE_PROPORTION = 0;
+    private static final double READ_PROPORTION = 0.05;
+    private static final double UPDATE_PROPORTION = 0.95;
     private static final double INSERT_PROPORTION = 0;
     private static final double SCAN_PROPORTION = 0;
 

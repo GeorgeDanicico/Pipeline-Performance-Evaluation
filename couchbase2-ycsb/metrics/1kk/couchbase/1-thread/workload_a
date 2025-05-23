@@ -1,0 +1,33 @@
+Phase Times:
+--------------------
+Load Phase Time: 0.00 ms
+Run Phase Time:  15492.03 ms
+
+Throughput:
+--------------------
+Load Phase: Infinity ops/sec
+Run Phase:  645.49 ops/sec
+
+Operation Latencies (milliseconds):
+--------------------------------
+
+Read Operations:
+--------------------
+Count:     4981
+Min:       0.65 ms
+Mean:      1.12 ms
+P50:       0.87 ms
+P75:       0.95 ms
+P90:       1.04 ms
+P99:       1.45 ms
+Max:       1126.97 ms
+
+Update Operations:
+--------------------
+Count:     5019
+Min:       1.46 ms
+Mean:      1.94 ms
+P50:       1.86 ms
+P75:       2.02 ms
+P90:       2.23 ms
+P99:       3.25 ms

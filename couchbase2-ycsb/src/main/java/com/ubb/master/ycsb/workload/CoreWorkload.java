@@ -53,12 +53,15 @@ public class CoreWorkload implements Workload {
     }
 
     @Override
-    public void insertInit(String key, HashMap<String, ByteIterator> values) {
+    public long insertInit(String key, HashMap<String, ByteIterator> values) {
+        var startTime = System.nanoTime();
         for (int i = 0; i < fieldCount; i++) {
             String fieldKey = "field" + i;
             String fieldValue = generateRandomString(fieldLength);
             values.put(fieldKey, new StringByteIterator(fieldValue));
         }
+        var endTime = System.nanoTime();
+        return endTime - startTime;
     }
 
     @Override

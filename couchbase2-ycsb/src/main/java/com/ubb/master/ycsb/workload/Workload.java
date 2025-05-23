@@ -24,7 +24,7 @@ public interface Workload {
      * @param key The key of the record to insert.
      * @param values The values to insert.
      */
-    void insertInit(String key, HashMap<String, ByteIterator> values);
+    long insertInit(String key, HashMap<String, ByteIterator> values);
 
     /**
      * Initialize a record for update.

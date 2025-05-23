@@ -1,5 +1,6 @@
 package com.ubb.master.ycsb.db;
 
+import com.mongodb.client.model.Updates;
 import com.ubb.master.ycsb.enums.Status;
 import com.ubb.master.ycsb.iterator.ByteIterator;
 import com.ubb.master.ycsb.iterator.StringByteIterator;
@@ -97,20 +98,6 @@ public class MongoDBClient implements DB {
                 return Status.NOT_FOUND;
             }
 
-            if (fields == null) {
-                for (String field : doc.keySet()) {
-                    if (!field.equals("_id")) {
-                        result.put(field, new StringByteIterator(doc.get(field).toString()));
-                    }
-                }
-            } else {
-                for (String field : fields) {
-                    if (doc.containsKey(field)) {
-                        result.put(field, new StringByteIterator(doc.get(field).toString()));
-                    }
-                }
-            }
-
             return Status.OK;
         } catch (MongoException e) {
             if (debug) {
@@ -159,14 +146,10 @@ public class MongoDBClient implements DB {
     public Status update(String table, String key, HashMap<String, ByteIterator> values) {
         try {
             Bson filter = Filters.eq("_id", key);
-            Document updateDoc = new Document();
-            
-            for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-                updateDoc.append(entry.getKey(), entry.getValue().toString());
-            }
+            Document updateDoc = buildValues(values);
 
-//            Bson update = Updates.set(updateDoc);
-//            collection.updateOne(filter, update);
+            Document update = new Document("$set", updateDoc);
+            collection.updateOne(filter, update);
             return Status.OK;
         } catch (MongoException e) {
             if (debug) {

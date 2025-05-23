@@ -1,0 +1,14 @@
+=== Benchmark Results ===
+
+Phase Times:
+--------------------
+Load Phase Time: 0.00 ms
+Run Phase Time:  13455.00 ms
+
+Throughput:
+--------------------
+Load Phase: Infinity ops/sec
+Run Phase:  743.22 ops/sec
+
+Operation Latencies (milliseconds):
+--------------------------------

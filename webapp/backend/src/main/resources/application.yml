@@ -13,3 +13,15 @@ quarkus:
     bucket-name: census
     scope-name: nyc_taxi
     collection-name: nyc_taxi
+
+  http:
+    cors:
+      enabled: true
+      origins: http://localhost:3000
+
+  datasource:
+    db-kind: postgresql
+    username: admin
+    password: password
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/benchmark

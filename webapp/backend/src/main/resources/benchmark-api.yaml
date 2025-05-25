@@ -22,6 +22,10 @@ paths:
       responses:
         '202':
           description: Benchmark started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BenchmarkResponse'
         '400':
           description: Invalid request parameters
 
@@ -71,11 +75,16 @@ components:
     WorkloadType:
       type: string
       enum:
-        - Workload_a
-        - Workload_b
-        - Workload_c
-        - Workload_d
-
+        - WORKLOAD_A
+        - WORKLOAD_B
+        - WORKLOAD_C
+        - WORKLOAD_D
+    BenchmarkResponse:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Benchmark has started successfully"
     BenchmarkRequest:
       type: object
       required:

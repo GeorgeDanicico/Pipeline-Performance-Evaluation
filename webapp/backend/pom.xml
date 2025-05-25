@@ -69,6 +69,21 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm-panache</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -125,21 +140,34 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>7.2.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/benchmark-api.yaml</inputSpec>
+                            <generatorName>jaxrs-spec</generatorName>
+                            <library>quarkus</library>
+                            <configOptions>
+                                <apiPackage>com.ubb.master.generated.api</apiPackage>
+                                <modelPackage>com.ubb.master.generated.api.model</modelPackage>
+                                <interfaceOnly>true</interfaceOnly>
+                                <useTags>true</useTags>
+                                <dateLibrary>java8</dateLibrary>
+                                <openApiNullable>false</openApiNullable>
+                                <useBeanValidation>false</useBeanValidation>
+                                <useJakartaEe>true</useJakartaEe>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>native</id>
-            <activation>
-                <property>
-                    <name>native</name>
-                </property>
-            </activation>
-            <properties>
-                <skipITs>false</skipITs>
-                <quarkus.native.enabled>true</quarkus.native.enabled>
-            </properties>
-        </profile>
-    </profiles>
 </project>

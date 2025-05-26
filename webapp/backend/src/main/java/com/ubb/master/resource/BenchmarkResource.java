@@ -20,7 +20,7 @@ public class BenchmarkResource implements BenchmarkApi {
     @Override
     public BenchmarkResponse startBenchmark(BenchmarkRequest benchmarkRequest) {
         log.info("Starting benchmark with request: {}", benchmarkRequest);
-        benchmarkService.startBenchmark();
+        benchmarkService.startBenchmark(benchmarkRequest);
 
         BenchmarkResponse response = new BenchmarkResponse();
         response.setMessage("Benchmark has started successfully");

@@ -4,8 +4,8 @@ import { Paper, Typography, List, ListItem, ListItemButton, ListItemText, Box, C
 import { useRouter } from 'next/navigation';
 import { useWorkloadHistory } from '../hooks/useWorkloadHistory';
 
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
+const formatTimestamp = (timestamp: number) => {
+  const date = new Date(timestamp * 1000);
   return date.toLocaleString();
 };
 

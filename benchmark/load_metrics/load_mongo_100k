@@ -1,0 +1,53 @@
+2 threaduri
+
+=== Load Phase Results ===
+Duration: 52.71 seconds
+Throughput: 1897.19 ops/sec
+
+Latency Statistics (ms):
+Count: 100000
+Min: 0.00
+Mean: 1.05
+P50: 1.07
+P75: 1.11
+P90: 1.53
+P99: 2.89
+Max: 35.75
+
+=== Load Resource Usage ===
+CPU Usage:
+  Average: 46.21%
+  Max: 116.40%
+  Min: 0.00%
+
+RAM Usage:
+  Average: 36.24 MB
+  Max: 38.63 MB
+  Min: 33.55 MB
+
+  4 threaduri
+
+  === Load Phase Results ===
+Duration: 26.22 seconds
+Throughput: 3813.97 ops/sec
+
+Latency Statistics (ms):
+Count: 100000
+Min: 0.00
+Mean: 1.04
+P50: 1.07
+P75: 1.10
+P90: 1.53
+P99: 2.92
+Max: 11.60
+
+=== Load Resource Usage ===
+CPU Usage:
+  Average: 93.03%
+  Max: 151.20%
+  Min: 0.00%
+
+RAM Usage:
+  Average: 36.28 MB
+  Max: 38.68 MB
+  Min: 33.61 MB

@@ -1,0 +1,39 @@
+{
+  "workload_name": "Read-Only",
+  "thread_count": 1,
+  "record_count": 1000,
+  "operation_count": 1000,
+  "load_phase_time": 1.8567304611206055,
+  "run_phase_time": 1.8151588439941406,
+  "read_latencies": {
+    "min": 0.0010449886322021484,
+    "max": 0.004225969314575195,
+    "mean": 0.0018109147548675537,
+    "p50": 0.0016167163848876953,
+    "p75": 0.002134561538696289,
+    "p90": 0.002207040786743164,
+    "p99": 0.003246307373046875
+  },
+  "update_latencies": {},
+  "insert_latencies": {},
+  "scan_latencies": {},
+  "operation_counts": {
+    "read": 1000,
+    "update": 0,
+    "insert": 0,
+    "scan": 0,
+    "errors": 0
+  },
+  "resource_usage": {
+    "cpu": {
+      "average": 59.233333333333334,
+      "max": 116.4,
+      "min": 0.0
+    },
+    "ram": {
+      "average": 85.56879340277777,
+      "max": 85.5703125,
+      "min": 85.54296875
+    }
+  }
+}

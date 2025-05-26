@@ -1,18 +1,12 @@
 quarkus:
   devservices:
     enabled: false
-  mongodb:
-    connection-string: mongodb://localhost:27017
-    database: census
-    collection: nyc_taxi
-
-  couchbase:
-    connection-string: couchbase://localhost
-    username: Administrator
-    password: password
-    bucket-name: census
-    scope-name: nyc_taxi
-    collection-name: nyc_taxi
+  # Python API client configuration
+  rest-client:
+    python-api:
+      url: http://localhost:8000
+      connect-timeout: 5000
+      read-timeout: 500000
 
   http:
     cors:
@@ -22,6 +16,10 @@ quarkus:
   datasource:
     db-kind: postgresql
     username: admin
-    password: password
+    password: 123
     jdbc:
-      url: jdbc:postgresql://localhost:5432/benchmark
+      url: jdbc:postgresql://localhost:5432/ycsb
+
+  hibernate-orm:
+    database:
+      generation: drop-and-create

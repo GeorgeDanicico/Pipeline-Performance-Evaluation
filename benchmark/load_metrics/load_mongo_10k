@@ -1,0 +1,54 @@
+storage usage: 2 mb
+index size: 0.18 mb
+
+1 thread
+=== Load Phase Results ===
+Duration: 9.88 seconds
+Throughput: 1012.48 ops/sec
+
+Latency Statistics (ms):
+Count: 10000
+Min: 0.00
+Mean: 0.98
+P50: 1.07
+P75: 1.10
+P90: 1.18
+P99: 1.77
+Max: 8.45
+
+=== Load Resource Usage ===
+CPU Usage:
+  Average: 22.23%
+  Max: 84.00%
+  Min: 0.00%
+
+RAM Usage:
+  Average: 34.05 MB
+  Max: 34.35 MB
+  Min: 33.58 MB
+
+2 threads:
+=== Load Phase Results ===
+Duration: 5.11 seconds
+Throughput: 1957.20 ops/sec
+
+Latency Statistics (ms):
+Count: 10000
+Min: 0.00
+Mean: 1.02
+P50: 1.08
+P75: 1.10
+P90: 1.24
+P99: 1.91
+Max: 29.95
+
+=== Load Resource Usage ===
+CPU Usage:
+  Average: 37.72%
+  Max: 99.70%
+  Min: 0.00%
+
+RAM Usage:
+  Average: 34.26 MB
+  Max: 34.55 MB
+  Min: 33.69 MB

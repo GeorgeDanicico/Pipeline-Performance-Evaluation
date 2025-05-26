@@ -17,6 +17,7 @@ import {
 import { WorkloadHistoryItem } from '@/app/hooks/useWorkloadHistory';
 import { BarChart } from '@mui/x-charts/BarChart';
 import CssBaseline from '@mui/material/CssBaseline';
+import { GridProps } from '@mui/material/Grid';
 
 const theme = createTheme({
   palette: {
@@ -104,63 +105,147 @@ function MetricsSection({ title, metrics }: { title: string; metrics: WorkloadHi
 }
 
 function ComparisonChart({ mongoMetrics, couchbaseMetrics }: { mongoMetrics: WorkloadHistoryItem['mongo_metrics']; couchbaseMetrics: WorkloadHistoryItem['couchbase_metrics'] }) {
-  const xLabels = [
-    'Execution Time',
-    'P50',
-    'P75',
-    'P90',
-    'P99',
-    'Ops/sec',
-    'Memory Usage',
-    'Index Memory',
-  ];
-
-  const series = [
+  const metrics = [
+    // Execution metrics
     {
-      data: [
-        mongoMetrics.executionTime,
-        mongoMetrics.executionP50,
-        mongoMetrics.executionP75,
-        mongoMetrics.executionP90,
-        mongoMetrics.executionP99,
-        mongoMetrics.executeOperationsPerSec,
-        mongoMetrics.memoryUsage,
-        mongoMetrics.indexMemoryUsage,
-      ],
-      label: 'MongoDB',
-      color: '#1976d2',
+      name: 'Execution Time',
+      mongoValue: mongoMetrics?.executionTime ?? 0,
+      couchbaseValue: couchbaseMetrics?.executionTime ?? 0,
+      unit: 'ms'
     },
     {
-      data: [
-        couchbaseMetrics.executionTime,
-        couchbaseMetrics.executionP50,
-        couchbaseMetrics.executionP75,
-        couchbaseMetrics.executionP90,
-        couchbaseMetrics.executionP99,
-        couchbaseMetrics.executeOperationsPerSec,
-        couchbaseMetrics.memoryUsage,
-        couchbaseMetrics.indexMemoryUsage,
-      ],
-      label: 'Couchbase',
-      color: '#2e7d32',
+      name: 'Execution P50',
+      mongoValue: mongoMetrics?.executionP50 ?? 0,
+      couchbaseValue: couchbaseMetrics?.executionP50 ?? 0,
+      unit: 'ms'
     },
+    {
+      name: 'Execution P75',
+      mongoValue: mongoMetrics?.executionP75 ?? 0,
+      couchbaseValue: couchbaseMetrics?.executionP75 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Execution P90',
+      mongoValue: mongoMetrics?.executionP90 ?? 0,
+      couchbaseValue: couchbaseMetrics?.executionP90 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Execution P99',
+      mongoValue: mongoMetrics?.executionP99 ?? 0,
+      couchbaseValue: couchbaseMetrics?.executionP99 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Execution Operations/sec',
+      mongoValue: mongoMetrics?.executeOperationsPerSec ?? 0,
+      couchbaseValue: couchbaseMetrics?.executeOperationsPerSec ?? 0,
+      unit: 'ops'
+    },
+    // Data loading metrics
+    {
+      name: 'Data Load Time',
+      mongoValue: mongoMetrics?.loadingTime ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingTime ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Data Load P50',
+      mongoValue: mongoMetrics?.loadingP50 ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingP50 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Data Load P75',
+      mongoValue: mongoMetrics?.loadingP75 ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingP75 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Data Load P90',
+      mongoValue: mongoMetrics?.loadingP90 ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingP90 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Data Load P99',
+      mongoValue: mongoMetrics?.loadingP99 ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingP99 ?? 0,
+      unit: 'ms'
+    },
+    {
+      name: 'Data Load Operations/sec',
+      mongoValue: mongoMetrics?.loadingOperationsPerSec ?? 0,
+      couchbaseValue: couchbaseMetrics?.loadingOperationsPerSec ?? 0,
+      unit: 'ops'
+    },
+    // Memory metrics
+    {
+      name: 'Memory Usage',
+      mongoValue: mongoMetrics?.memoryUsage ?? 0,
+      couchbaseValue: couchbaseMetrics?.memoryUsage ?? 0,
+      unit: 'MB'
+    },
+    {
+      name: 'Index Memory',
+      mongoValue: mongoMetrics?.indexMemoryUsage ?? 0,
+      couchbaseValue: couchbaseMetrics?.indexMemoryUsage ?? 0,
+      unit: 'MB'
+    }
   ];
 
   return (
-    <Box sx={{ height: 400, width: '100%', mb: 4 }}>
-      <BarChart
-        series={series}
-        xAxis={[{ scaleType: 'band', data: xLabels }]}
-        height={400}
-        margin={{ top: 20, bottom: 100, left: 40, right: 20 }}
-        slotProps={{
-          legend: {
-            direction: 'row',
-            position: { vertical: 'top', horizontal: 'right' },
-          },
-        }}
-      />
-    </Box>
+    <Grid container spacing={3}>
+      {metrics.map((metric) => (
+        <Grid component="div" key={metric.name} xs={12} md={6}>
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              {metric.name}
+            </Typography>
+            <Box sx={{ height: 300, width: '100%' }}>
+              <BarChart
+                series={[
+                  {
+                    data: [metric.mongoValue],
+                    label: 'MongoDB',
+                    color: '#2e7d32', // Green for MongoDB
+                  },
+                  {
+                    data: [metric.couchbaseValue],
+                    label: 'Couchbase',
+                    color: '#1976d2', // Blue for Couchbase
+                  },
+                ]}
+                xAxis={[{ scaleType: 'band', data: [''] }]}
+                height={300}
+                margin={{ top: 20, bottom: 30, left: 40, right: 100 }}
+                slotProps={{
+                  legend: {
+                    direction: 'column',
+                    position: { vertical: 'top', horizontal: 'right' },
+                    padding: 20,
+                  },
+                }}
+                yAxis={[
+                  {
+                    label: metric.unit,
+                  },
+                ]}
+              />
+            </Box>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-around' }}>
+              <Typography sx={{ color: '#2e7d32' }}>
+                MongoDB: {metric.mongoValue.toLocaleString()} {metric.unit}
+              </Typography>
+              <Typography sx={{ color: '#1976d2' }}>
+                Couchbase: {metric.couchbaseValue.toLocaleString()} {metric.unit}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      ))}
+    </Grid>
   );
 }
 
@@ -199,26 +284,26 @@ export default function HistoryDetail() {
             Workload Details
           </Typography>
           <Grid container spacing={2}>
-            <Grid xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography color="text.secondary">Workload Type</Typography>
               <Typography variant="h6">{historyItem.workloadType}</Typography>
             </Grid>
-            <Grid xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography color="text.secondary">Record Count</Typography>
               <Typography variant="h6">{historyItem.recordCount.toLocaleString()}</Typography>
             </Grid>
-            <Grid xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography color="text.secondary">Operation Count</Typography>
               <Typography variant="h6">{historyItem.operationCount.toLocaleString()}</Typography>
             </Grid>
-            <Grid xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={3}>
               <Typography color="text.secondary">Thread Count</Typography>
               <Typography variant="h6">{historyItem.threadCount}</Typography>
             </Grid>
-            <Grid xs={12}>
+            <Grid item xs={12}>
               <Typography color="text.secondary">Timestamp</Typography>
               <Typography variant="h6">
-                {new Date(historyItem.timestamp).toLocaleString()}
+                {new Date(historyItem.timestamp * 1000).toLocaleString()}
               </Typography>
             </Grid>
           </Grid>

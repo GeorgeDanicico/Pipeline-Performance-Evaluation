@@ -3,7 +3,6 @@ package com.ubb.master.model;
 import lombok.Data;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 
 @Data
 @Entity
@@ -13,52 +12,118 @@ public class BenchmarkResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "record_count")
+    private Long recordCount;
+
+    @Column(name = "operation_count")
+    private Long operationCount;
+
+    @Column(name = "thread_count")
+    private Long threadCount;
+
     @Column(name = "timestamp")
-    private Instant timestamp;
+    private Long timestamp;
 
-    @Column(name = "database")
-    private String database;
+    @Column(name = "workload_type")
+    private String workloadType;
 
-    @Column(name = "execution_time")
-    private long executionTime;
+    // MongoDB execution metrics
+    @Column(name = "mongo_execution_time")
+    private Long mongoExecutionTime;
 
-    @Column(name = "execution_p50")
-    private double executionP50;
+    @Column(name = "mongo_execution_p50")
+    private Double mongoExecutionP50;
 
-    @Column(name = "execution_p75")
-    private double executionP75;
+    @Column(name = "mongo_execution_p75")
+    private Double mongoExecutionP75;
 
-    @Column(name = "execution_p90")
-    private double executionP90;
+    @Column(name = "mongo_execution_p90")
+    private Double mongoExecutionP90;
 
-    @Column(name = "execution_p99")
-    private double executionP99;
+    @Column(name = "mongo_execution_p99")
+    private Double mongoExecutionP99;
 
-    @Column(name = "execute_operations_per_sec")
-    private double executeOperationsPerSec;
+    @Column(name = "mongo_execute_operations_per_sec")
+    private Double mongoExecuteOperationsPerSec;
 
-    @Column(name = "memory_usage")
-    private long memoryUsage;
+    @Column(name = "mongo_memory_usage")
+    private Long mongoMemoryUsage;
 
-    @Column(name = "index_memory_usage")
-    private long indexMemoryUsage;
+    @Column(name = "mongo_index_memory_usage")
+    private Long mongoIndexMemoryUsage;
 
-    // Loading metrics
-    @Column(name = "loading_time")
-    private long loadingTime;
+    // MongoDB loading metrics
+    @Column(name = "mongo_loading_time")
+    private Long mongoLoadingTime;
 
-    @Column(name = "loading_p50")
-    private double loadingP50;
+    @Column(name = "mongo_loading_p50")
+    private Double mongoLoadingP50;
 
-    @Column(name = "loading_p75")
-    private double loadingP75;
+    @Column(name = "mongo_loading_p75")
+    private Double mongoLoadingP75;
 
-    @Column(name = "loading_p90")
-    private double loadingP90;
+    @Column(name = "mongo_loading_p90")
+    private Double mongoLoadingP90;
 
-    @Column(name = "loading_p99")
-    private double loadingP99;
+    @Column(name = "mongo_loading_p99")
+    private Double mongoLoadingP99;
 
-    @Column(name = "loading_operations_per_sec")
-    private double loadingOperationsPerSec;
+    @Column(name = "mongo_loading_operations_per_sec")
+    private Double mongoLoadingOperationsPerSec;
+
+    @Column(name = "mongo_loading_memory_usage")
+    private Long mongoLoadingMemoryUsage;
+
+    @Column(name = "mongo_loading_index_memory_usage")
+    private Long mongoLoadingIndexMemoryUsage;
+
+    // Couchbase execution metrics
+    @Column(name = "couchbase_execution_time")
+    private Long couchbaseExecutionTime;
+
+    @Column(name = "couchbase_execution_p50")
+    private Double couchbaseExecutionP50;
+
+    @Column(name = "couchbase_execution_p75")
+    private Double couchbaseExecutionP75;
+
+    @Column(name = "couchbase_execution_p90")
+    private Double couchbaseExecutionP90;
+
+    @Column(name = "couchbase_execution_p99")
+    private Double couchbaseExecutionP99;
+
+    @Column(name = "couchbase_execute_operations_per_sec")
+    private Double couchbaseExecuteOperationsPerSec;
+
+    @Column(name = "couchbase_memory_usage")
+    private Long couchbaseMemoryUsage;
+
+    @Column(name = "couchbase_index_memory_usage")
+    private Long couchbaseIndexMemoryUsage;
+
+    // Couchbase loading metrics
+    @Column(name = "couchbase_loading_time")
+    private Long couchbaseLoadingTime;
+
+    @Column(name = "couchbase_loading_p50")
+    private Double couchbaseLoadingP50;
+
+    @Column(name = "couchbase_loading_p75")
+    private Double couchbaseLoadingP75;
+
+    @Column(name = "couchbase_loading_p90")
+    private Double couchbaseLoadingP90;
+
+    @Column(name = "couchbase_loading_p99")
+    private Double couchbaseLoadingP99;
+
+    @Column(name = "couchbase_loading_operations_per_sec")
+    private Double couchbaseLoadingOperationsPerSec;
+
+    @Column(name = "couchbase_loading_memory_usage")
+    private Long couchbaseLoadingMemoryUsage;
+
+    @Column(name = "couchbase_loading_index_memory_usage")
+    private Long couchbaseLoadingIndexMemoryUsage;
 }

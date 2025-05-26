@@ -21,7 +21,7 @@ interface Metrics {
 
 export interface WorkloadHistoryItem {
   id: number;
-  timestamp: string;
+  timestamp: number;
   workloadType: string;
   recordCount: number;
   operationCount: number;
@@ -41,11 +41,7 @@ const fetcher = async (url: string) => {
 export function useWorkloadHistory() {
   const { data, error, isLoading, mutate } = useSWR<WorkloadHistoryItem[]>(
     'http://localhost:8080/api/v1/histories',
-    fetcher,
-    {
-      refreshInterval: 60000, // Refresh every minute
-      revalidateOnFocus: true,
-    }
+    fetcher
   );
 
   return {

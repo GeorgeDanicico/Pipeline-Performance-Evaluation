@@ -40,12 +40,33 @@ export default function WorkloadForm() {
     });
   };
 
-  const handleStartWorkload = () => {
+  const handleStartWorkload = async () => {
     setIsLoading(true);
-    // Simulate some async operation
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/start_benchmark', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workloadType: formData.workload.replace(' ', '_').toUpperCase(),
+          recordCount: parseInt(formData.recordCount),
+          operationCount: parseInt(formData.operationCount),
+          threadCount: parseInt(formData.threadCount),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start benchmark');
+      }
+
+      const data = await response.json();
+      console.log('Benchmark started:', data);
+    } catch (error) {
+      console.error('Error starting benchmark:', error);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (

@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Benchmark API
   description: API for running and retrieving database benchmarks
@@ -167,8 +167,8 @@ components:
           type: integer
           format: int64
         timestamp:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
         workloadType:
           $ref: '#/components/schemas/WorkloadType'
         recordCount:

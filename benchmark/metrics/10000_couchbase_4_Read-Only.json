@@ -1,0 +1,27 @@
+{
+  "workload_name": "Read-Only",
+  "thread_count": 4,
+  "record_count": 10000,
+  "operation_count": 10000,
+  "load_phase_time": 0,
+  "run_phase_time": 2.2921931743621826,
+  "read_latencies": {
+    "min": 0.0,
+    "max": 0.010009765625,
+    "mean": 0.0009103387832641601,
+    "p50": 0.0010652542114257812,
+    "p75": 0.0010809898376464844,
+    "p90": 0.0011518001556396484,
+    "p99": 0.0016798973083496094
+  },
+  "update_latencies": {},
+  "insert_latencies": {},
+  "scan_latencies": {},
+  "operation_counts": {
+    "read": 10000,
+    "update": 0,
+    "insert": 0,
+    "scan": 0,
+    "errors": 0
+  }
+}

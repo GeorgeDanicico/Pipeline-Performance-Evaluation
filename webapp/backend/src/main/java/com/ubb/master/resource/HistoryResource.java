@@ -5,6 +5,7 @@ import com.ubb.master.generated.api.model.BenchmarkHistory;
 import com.ubb.master.generated.api.model.DatabaseMetrics;
 import com.ubb.master.generated.api.model.WorkloadType;
 
+import com.ubb.master.service.BenchmarkService;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -16,9 +17,11 @@ import java.util.Map;
 public class HistoryResource implements HistoryApi {
 
     private final Map<Long, BenchmarkHistory> mockHistories = new HashMap<>();
+    private final BenchmarkService benchmarkService;
 
-    public HistoryResource() {
+    public HistoryResource(BenchmarkService benchmarkService) {
         initializeMockData();
+        this.benchmarkService = benchmarkService;
     }
 
     private void initializeMockData() {
@@ -31,7 +34,7 @@ public class HistoryResource implements HistoryApi {
     private BenchmarkHistory createMockBenchmarkHistory(long id) {
         BenchmarkHistory history = new BenchmarkHistory();
         history.setId(id);
-        history.setTimestamp(OffsetDateTime.now().minusDays(id));
+        history.setTimestamp(0L);
         history.setWorkloadType(getRandomWorkloadType(id));
         history.setRecordCount(100000L * id);
         history.setOperationCount(50000L * id);
@@ -76,11 +79,11 @@ public class HistoryResource implements HistoryApi {
 
     @Override
     public List<BenchmarkHistory> getBenchmarkHistories() {
-        return new ArrayList<>(mockHistories.values());
+        return benchmarkService.getBenchmarkHistory();
     }
 
     @Override
     public BenchmarkHistory getBenchmarkHistoryById(Long id) {
-        return mockHistories.getOrDefault(id, null);
+        return benchmarkService.getBenchmarkHistoryById(id);
     }
 }

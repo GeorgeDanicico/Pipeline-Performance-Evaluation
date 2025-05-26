@@ -89,6 +89,7 @@ class CouchbaseBenchmark:
         """Initialize Couchbase connection"""
         auth = PasswordAuthenticator(self.BUCKET_NAME, self.BUCKET_PASSWORD)
         options = ClusterOptions(auth)
+        options.max_connections = 100  # Match MongoDB's maxPoolSize
         self.cluster = Cluster(f"couchbase://{self.HOST}", options)
         self.bucket = self.cluster.bucket(self.BUCKET_NAME)
         self.collection = self.bucket.default_collection()
@@ -97,9 +98,31 @@ class CouchbaseBenchmark:
         """Cleanup Couchbase connection"""
         if self.cluster:
             bucket_manager = self.cluster.buckets()
-            bucket_manager.flush_bucket("census")
-
+            bucket_manager.flush_bucket(self.BUCKET_NAME)
             self.cluster.close()
+
+    def update_progress(self, records_processed: int):
+        """Update and print progress in a thread-safe manner"""
+        with self.loaded_records_lock:
+            self.loaded_records += records_processed
+            current_time = time.time()
+            
+            # Only print progress every 100,000 records or if it's been more than 5 seconds
+            if (self.loaded_records % 100000 == 0 or 
+                current_time - self.last_progress_time >= 5):
+                
+                with self.last_progress_time_lock:
+                    self.last_progress_time = current_time
+                
+                elapsed_time = current_time - self.load_phase_start_time
+                progress = (self.loaded_records / self.RECORD_COUNT) * 100
+                rate = self.loaded_records / elapsed_time if elapsed_time > 0 else 0
+                
+                print(f"\rProgress: {progress:.1f}% ({self.loaded_records:,}/{self.RECORD_COUNT:,} records) "
+                      f"Rate: {rate:.0f} records/sec "
+                      f"Elapsed: {elapsed_time:.1f}s "
+                      f"ETA: {(self.RECORD_COUNT - self.loaded_records) / rate:.1f}s if rate remains constant", 
+                      end="", flush=True)
 
     def print_phase_metrics(self, phase_name: str, start_time: float, end_time: float, operation_count: int, latencies: List[float]):
         """Print metrics for a specific phase"""
@@ -124,28 +147,43 @@ class CouchbaseBenchmark:
         else:
             print("\nNo operations performed in this phase")
 
-    def update_progress(self, records_processed: int):
-        """Update and print progress in a thread-safe manner"""
-        with self.loaded_records_lock:
-            self.loaded_records += records_processed
-            current_time = time.time()
-            
-            # Only print progress every 100,000 records or if it's been more than 5 seconds
-            if (self.loaded_records % 100000 == 0 or 
-                current_time - self.last_progress_time >= 5):
-                
-                with self.last_progress_time_lock:
-                    self.last_progress_time = current_time
-                
-                elapsed_time = current_time - self.load_phase_start_time
-                progress = (self.loaded_records / self.RECORD_COUNT) * 100
-                rate = self.loaded_records / elapsed_time if elapsed_time > 0 else 0
-                
-                print(f"\rProgress: {progress:.1f}% ({self.loaded_records:,}/{self.RECORD_COUNT:,} records) "
-                      f"Rate: {rate:.0f} records/sec "
-                      f"Elapsed: {elapsed_time:.1f}s "
-                      f"ETA: {(self.RECORD_COUNT - self.loaded_records) / rate:.1f}s if rate remains constant", 
-                      end="", flush=True)
+    def monitor_resources(self):
+        """Monitor CPU and RAM usage in a separate thread"""
+        process = psutil.Process()
+        while self.should_monitor:
+            self.cpu_usage.append(process.cpu_percent())
+            self.ram_usage.append(process.memory_info().rss / 1024 / 1024)  # Convert to MB
+            time.sleep(0.1)  # Sample every 100ms
+
+    def start_monitoring(self):
+        """Start resource monitoring"""
+        self.cpu_usage = []
+        self.ram_usage = []
+        self.should_monitor = True
+        self.monitoring_thread = threading.Thread(target=self.monitor_resources)
+        self.monitoring_thread.start()
+
+    def stop_monitoring(self):
+        """Stop resource monitoring"""
+        self.should_monitor = False
+        if self.monitoring_thread:
+            self.monitoring_thread.join()
+
+    def print_resource_metrics(self, phase_name: str):
+        """Print resource usage metrics for a phase"""
+        if not self.cpu_usage or not self.ram_usage:
+            return
+
+        print(f"\n=== {phase_name} Resource Usage ===")
+        print(f"CPU Usage:")
+        print(f"  Average: {statistics.mean(self.cpu_usage):.2f}%")
+        print(f"  Max: {max(self.cpu_usage):.2f}%")
+        print(f"  Min: {min(self.cpu_usage):.2f}%")
+        
+        print(f"\nRAM Usage:")
+        print(f"  Average: {statistics.mean(self.ram_usage):.2f} MB")
+        print(f"  Max: {max(self.ram_usage):.2f} MB")
+        print(f"  Min: {min(self.ram_usage):.2f} MB")
 
     def load_data(self, thread_count: int = None, record_count: int = None):
         """Load initial data into Couchbase"""
@@ -219,6 +257,7 @@ class CouchbaseBenchmark:
             record_count,
             self.insert_latencies
         )
+        self.print_resource_metrics("Load")
 
     def run_benchmark(self, operation_count: int = None, thread_count: int = None, workload_config: dict = None):
         """Run the benchmark operations with specified parameters"""
@@ -258,7 +297,7 @@ class CouchbaseBenchmark:
                         result = self.collection.get(key)
                         self.read_latencies.append(time.time() - start_time)
                         self.read_counter += 1
-                    except Exception as e:
+                    except CouchbaseException as e:
                         print(f"Error reading record {key}: {e}")
                         self.error_counter += 1
 
@@ -276,7 +315,7 @@ class CouchbaseBenchmark:
                         self.collection.upsert(key, values)
                         self.update_latencies.append(time.time() - start_time)
                         self.update_counter += 1
-                    except Exception as e:
+                    except CouchbaseException as e:
                         print(f"Error updating record {key}: {e}")
                         self.error_counter += 1
 
@@ -293,7 +332,7 @@ class CouchbaseBenchmark:
         self.stop_monitoring()
         print(f"\n{workload_config['name']} workload completed.")
 
-        # Print run phase metrics
+        # Print run phase metrics for this workload
         print(f"\n=== {workload_config['name']} Workload Results ===")
         duration = self.run_phase_end_time - self.run_phase_start_time
         total_operations = self.read_counter + self.update_counter
@@ -315,7 +354,10 @@ class CouchbaseBenchmark:
         else:
             print("\nNo update operations performed")
 
-        # self.print_resource_metrics(f"{workload_config['name']} Run")
+        self.print_resource_metrics(f"{workload_config['name']} Run")
+
+        # Save metrics for this workload and thread count
+        self.save_metrics(workload_config['name'], thread_count)
 
     def calculate_percentiles(self, latencies: List[float]) -> Dict[str, float]:
         """Calculate percentile statistics for latencies"""
@@ -332,30 +374,6 @@ class CouchbaseBenchmark:
             "p90": latencies[int(len(latencies) * 0.90)],
             "p99": latencies[int(len(latencies) * 0.99)]
         }
-
-    def monitor_resources(self):
-        """Monitor CPU and RAM usage in a separate thread"""
-        process = psutil.Process()
-        while self.should_monitor:
-            self.cpu_usage.append(process.cpu_percent())
-            self.ram_usage.append(process.memory_info().rss / 1024 / 1024)  # Convert to MB
-            time.sleep(0.1)  # Sample every 100ms
-
-    def print_resource_metrics(self, phase_name: str):
-        """Print resource usage metrics for a phase"""
-        if not self.cpu_usage or not self.ram_usage:
-            return
-
-        print(f"\n=== {phase_name} Resource Usage ===")
-        print(f"CPU Usage:")
-        print(f"  Average: {statistics.mean(self.cpu_usage):.2f}%")
-        print(f"  Max: {max(self.cpu_usage):.2f}%")
-        print(f"  Min: {min(self.cpu_usage):.2f}%")
-        
-        print(f"\nRAM Usage:")
-        print(f"  Average: {statistics.mean(self.ram_usage):.2f} MB")
-        print(f"  Max: {max(self.ram_usage):.2f} MB")
-        print(f"  Min: {min(self.ram_usage):.2f} MB")
 
     def save_metrics(self, workload_name: str = "", thread_count: int = 1):
         """Save benchmark metrics to file and print results"""
@@ -398,16 +416,14 @@ class CouchbaseBenchmark:
 
         print(f"\nDetailed metrics have been saved to {filename}")
 
-    def start_monitoring(self):
-        """Start resource monitoring"""
-        self.cpu_usage = []
-        self.ram_usage = []
-        self.should_monitor = True
-        self.monitoring_thread = threading.Thread(target=self.monitor_resources)
-        self.monitoring_thread.start()
+def main():
+    benchmark = CouchbaseBenchmark()
+    try:
+        benchmark.init_connection()
+        benchmark.load_data()
+        benchmark.run_benchmark()
+    finally:
+        benchmark.cleanup()
 
-    def stop_monitoring(self):
-        """Stop resource monitoring"""
-        self.should_monitor = False
-        if self.monitoring_thread:
-            self.monitoring_thread.join()
+if __name__ == "__main__":
+    main()

@@ -10,7 +10,7 @@ import json
 import os
 from datetime import datetime
 import psutil
-import threading
+from threading import Lock
 
 class MongoDBBenchmark:
     def __init__(self):
@@ -27,24 +27,22 @@ class MongoDBBenchmark:
             {
                 "name": "Balanced",
                 "read_proportion": 0.5,
-                "update_proportion": 0.5
+                "update_proportion": 0.5,
             },
             {
                 "name": "Read-Heavy",
                 "read_proportion": 0.95,
-                "update_proportion": 0.05
+                "update_proportion": 0.05,
             },
             {
                 "name": "Read-Only",
                 "read_proportion": 1.0,
                 "update_proportion": 0.0,
-                "insert_proportion": 0,
-                "scan_proportion": 0
             },
             {
                 "name": "Update-Heavy",
                 "read_proportion": 0.05,
-                "update_proportion": 0.95
+                "update_proportion": 0.95,
             }
         ]
 
@@ -54,6 +52,12 @@ class MongoDBBenchmark:
         self.insert_counter = 0
         self.scan_counter = 0
         self.error_counter = 0
+
+        # Thread-safe counters and locks
+        self.loaded_records = 0
+        self.loaded_records_lock = Lock()
+        self.last_progress_time = time.time()
+        self.last_progress_time_lock = Lock()
 
         # Latency lists
         self.read_latencies: List[float] = []
@@ -83,7 +87,7 @@ class MongoDBBenchmark:
 
     def init_connection(self):
         """Initialize MongoDB connection"""
-        self.client = MongoClient(f"mongodb://{self.HOST}:27017?retryWrites=false")
+        self.client = MongoClient(f"mongodb://{self.HOST}:27017?retryWrites=false&maxPoolSize=100")
         self.db = self.client[self.DATABASE_NAME]
         self.collection = self.db[self.COLLECTION_NAME]
 
@@ -93,6 +97,29 @@ class MongoDBBenchmark:
             if self.collection is not None:
                 self.collection.delete_many({})
             self.client.close()
+
+    def update_progress(self, records_processed: int):
+        """Update and print progress in a thread-safe manner"""
+        with self.loaded_records_lock:
+            self.loaded_records += records_processed
+            current_time = time.time()
+            
+            # Only print progress every 100,000 records or if it's been more than 5 seconds
+            if (self.loaded_records % 100000 == 0 or 
+                current_time - self.last_progress_time >= 5):
+                
+                with self.last_progress_time_lock:
+                    self.last_progress_time = current_time
+                
+                elapsed_time = current_time - self.load_phase_start_time
+                progress = (self.loaded_records / self.RECORD_COUNT) * 100
+                rate = self.loaded_records / elapsed_time if elapsed_time > 0 else 0
+                
+                print(f"\rProgress: {progress:.1f}% ({self.loaded_records:,}/{self.RECORD_COUNT:,} records) "
+                      f"Rate: {rate:.0f} records/sec "
+                      f"Elapsed: {elapsed_time:.1f}s "
+                      f"ETA: {(self.RECORD_COUNT - self.loaded_records) / rate:.1f}s if rate remains constant", 
+                      end="", flush=True)
 
     def print_phase_metrics(self, phase_name: str, start_time: float, end_time: float, operation_count: int, latencies: List[float]):
         """Print metrics for a specific phase"""
@@ -158,15 +185,17 @@ class MongoDBBenchmark:
     def load_data(self, thread_count: int = None, record_count: int = None):
         """Load initial data into MongoDB"""
         print("Starting load phase...")
-        # self.start_monitoring()
+        self.load_phase_start_time = time.time()
+        self.loaded_records = 0
+        self.last_progress_time = self.load_phase_start_time
+        self.insert_latencies = []  # Reset insert latencies
 
         # Use provided parameters or fall back to defaults
         thread_count = thread_count or self.THREAD_COUNTS[2]
         record_count = record_count or self.RECORD_COUNT
 
-        self.insert_latencies = []  # Reset insert latencies
-
         def load_worker(start_record: int, end_record: int):
+            local_processed = 0
             for i in range(start_record, end_record):
                 key = f"user{i}"
                 values = {
@@ -186,14 +215,24 @@ class MongoDBBenchmark:
                 try:
                     self.collection.insert_one({"_id": key, **values})
                     self.insert_latencies.append(time.time() - start_time)
+                    local_processed += 1
+                    
+                    # Update progress every 1000 records
+                    if local_processed % 1000 == 0:
+                        self.update_progress(1000)
+                        local_processed = 0
+                        
                 except Exception as e:
-                    print(f"Error inserting record {key}: {e}")
+                    print(f"\nError inserting record {key}: {e}")
                     self.error_counter += 1
+            
+            # Update any remaining records
+            if local_processed > 0:
+                self.update_progress(local_processed)
 
         records_per_thread = record_count // thread_count
         threads = []
 
-        self.load_phase_start_time = time.time()
         for i in range(thread_count):
             start_record = i * records_per_thread
             end_record = record_count if i == thread_count - 1 else (i + 1) * records_per_thread
@@ -205,8 +244,7 @@ class MongoDBBenchmark:
             thread.join()
 
         self.load_phase_end_time = time.time()
-        # self.stop_monitoring()
-        print("Load phase completed.")
+        print("\nLoad phase completed.")
         
         # Print load phase metrics
         self.print_phase_metrics(
@@ -242,7 +280,7 @@ class MongoDBBenchmark:
         self.update_latencies = []
         
         self.run_phase_start_time = time.time()
-        # self.start_monitoring()
+        self.start_monitoring()
 
         def run_worker():
             for _ in range(operation_count // thread_count):
@@ -288,10 +326,10 @@ class MongoDBBenchmark:
             thread.join()
 
         self.run_phase_end_time = time.time()
-        # self.stop_monitoring()
+        self.stop_monitoring()
         print(f"\n{workload_config['name']} workload completed.")
 
-        # Print run phase metrics
+        # Print run phase metrics for this workload
         print(f"\n=== {workload_config['name']} Workload Results ===")
         duration = self.run_phase_end_time - self.run_phase_start_time
         total_operations = self.read_counter + self.update_counter
@@ -316,7 +354,7 @@ class MongoDBBenchmark:
         self.print_resource_metrics(f"{workload_config['name']} Run")
 
         # Save metrics for this workload and thread count
-        # self.save_metrics(workload_config['name'], thread_count)
+        self.save_metrics(workload_config['name'], thread_count)
 
     def calculate_percentiles(self, latencies: List[float]) -> Dict[str, float]:
         """Calculate percentile statistics for latencies"""
@@ -373,4 +411,16 @@ class MongoDBBenchmark:
         with open(filename, "w") as f:
             json.dump(metrics, f, indent=2)
 
-        print(f"\nDetailed metrics have been saved to {filename}") 
+        print(f"\nDetailed metrics have been saved to {filename}")
+
+def main():
+    benchmark = MongoDBBenchmark()
+    try:
+        benchmark.init_connection()
+        benchmark.load_data()
+        benchmark.run_benchmark()
+    finally:
+        benchmark.cleanup()
+
+if __name__ == "__main__":
+    main() 

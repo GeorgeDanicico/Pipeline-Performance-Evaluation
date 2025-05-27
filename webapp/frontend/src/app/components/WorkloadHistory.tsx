@@ -54,7 +54,7 @@ export default function WorkloadHistory() {
               <ListItem key={item.id} disablePadding>
                 <ListItemButton onClick={() => handleHistoryItemClick(item.id)}>
                   <ListItemText
-                    primary={`${item.workloadType} - Run #${item.id}`}
+                    primary={`${item.workloadType.replace('_', ' ')} - Run #${item.id}`}
                     secondary={
                       <>
                         <Typography component="span" variant="body2" color="text.primary">
@@ -68,8 +68,9 @@ export default function WorkloadHistory() {
                         </Typography>
                         <br />
                         <Typography component="span" variant="body2" color="text.secondary">
-                          Mongo Exec: {item.mongo_metrics.executionTime}ms | 
-                          Couchbase Exec: {item.couchbase_metrics.executionTime}ms
+                          {item.mongoMetrics && `Mongo Exec: ${item.mongoMetrics.executionTime}ms`}
+                          {item.mongoMetrics && item.couchbaseMetrics && ' | '}
+                          {item.couchbaseMetrics && `Couchbase Exec: ${item.couchbaseMetrics.executionTime}ms`}
                         </Typography>
                       </>
                     }

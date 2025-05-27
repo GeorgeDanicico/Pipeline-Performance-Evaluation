@@ -7,3 +7,6 @@ httpx==0.25.2
 couchbase~=4.3.6
 pydantic~=2.11.5
 psutil~=7.0.0
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1

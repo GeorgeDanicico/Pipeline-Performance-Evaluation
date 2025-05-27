@@ -189,12 +189,12 @@ class MongoDBBenchmark:
                     print(f"Error inserting record {key}: {e}")
                     self.error_counter += 1
 
-        records_per_thread = self.RECORD_COUNT // self.THREAD_COUNTS[2]
+        records_per_thread = self.RECORD_COUNT // self.THREAD_COUNTS[0]
         threads = []
 
-        for i in range(self.THREAD_COUNTS[2]):
+        for i in range(self.THREAD_COUNTS[0]):
             start_record = i * records_per_thread
-            end_record = self.RECORD_COUNT if i == self.THREAD_COUNTS[2] - 1 else (i + 1) * records_per_thread
+            end_record = self.RECORD_COUNT if i == self.THREAD_COUNTS[0] - 1 else (i + 1) * records_per_thread
             thread = threading.Thread(target=load_worker, args=(start_record, end_record))
             threads.append(thread)
             thread.start()

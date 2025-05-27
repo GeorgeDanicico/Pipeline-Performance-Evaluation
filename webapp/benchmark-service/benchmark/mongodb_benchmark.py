@@ -18,8 +18,8 @@ class MongoDBBenchmark:
         self.HOST = "127.0.0.1"
         self.DATABASE_NAME = "ycsb"
         self.COLLECTION_NAME = "usertable"
-        self.RECORD_COUNT = 1000000
-        self.OPERATION_COUNT = 1000000
+        self.RECORD_COUNT = 10000
+        self.OPERATION_COUNT = 10000
         self.THREAD_COUNTS = [1, 2, 4]  # List of thread counts to test
 
         # Define workload configurations
@@ -87,7 +87,7 @@ class MongoDBBenchmark:
 
     def init_connection(self):
         """Initialize MongoDB connection"""
-        self.client = MongoClient(f"mongodb://{self.HOST}:27017?retryWrites=false&maxPoolSize=100")
+        self.client = MongoClient(f"mongodb://{self.HOST}:27017?retryWrites=false&maxPoolSize=1000")
         self.db = self.client[self.DATABASE_NAME]
         self.collection = self.db[self.COLLECTION_NAME]
 
@@ -191,7 +191,7 @@ class MongoDBBenchmark:
         self.insert_latencies = []  # Reset insert latencies
 
         # Use provided parameters or fall back to defaults
-        thread_count = thread_count or self.THREAD_COUNTS[2]
+        thread_count = thread_count or self.THREAD_COUNTS[0]
         record_count = record_count or self.RECORD_COUNT
 
         def load_worker(start_record: int, end_record: int):
@@ -291,7 +291,7 @@ class MongoDBBenchmark:
                     # Read operation
                     start_time = time.time()
                     try:
-                        result = self.collection.find_one({"_id": key})
+                        self.collection.find_one({"_id": key})
                         self.read_latencies.append(time.time() - start_time)
                         self.read_counter += 1
                     except Exception as e:

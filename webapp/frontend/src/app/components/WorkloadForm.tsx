@@ -98,7 +98,6 @@ export default function WorkloadForm() {
       }
 
       const data: BenchmarkResponse = await response.json();
-      console.log('Benchmark started:', data);
       setBenchmarkResult(data);
     } catch (error) {
       console.error('Error starting benchmark:', error);

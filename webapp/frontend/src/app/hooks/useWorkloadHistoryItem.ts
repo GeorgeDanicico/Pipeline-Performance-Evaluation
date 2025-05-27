@@ -11,7 +11,7 @@ const fetcher = async (url: string) => {
 
 export function useWorkloadHistoryItem(id: string) {
   const { data, error, isLoading, mutate } = useSWR<WorkloadHistoryItem>(
-    `http://localhost:8080/api/v1/histories/${id}`,
+    `http://localhost:8000/api/v1/histories/${id}`,
     fetcher
   );
 

@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-interface Metrics {
+interface DatabaseMetrics {
   executionTime: number;
   executionP50: number;
   executionP75: number;
@@ -26,8 +26,8 @@ export interface WorkloadHistoryItem {
   recordCount: number;
   operationCount: number;
   threadCount: number;
-  mongo_metrics: Metrics;
-  couchbase_metrics: Metrics;
+  mongoMetrics: DatabaseMetrics | null;
+  couchbaseMetrics: DatabaseMetrics | null;
 }
 
 const fetcher = async (url: string) => {
@@ -40,7 +40,7 @@ const fetcher = async (url: string) => {
 
 export function useWorkloadHistory() {
   const { data, error, isLoading, mutate } = useSWR<WorkloadHistoryItem[]>(
-    'http://localhost:8080/api/v1/histories',
+    'http://localhost:8000/api/v1/histories',
     fetcher
   );
 

@@ -6,6 +6,7 @@ from database.models import BenchmarkResult
 from benchmark.mongodb_benchmark import MongoDBBenchmark
 from benchmark.couchbase_benchmark import CouchbaseBenchmark
 import asyncio
+from main import manager
 
 class BenchmarkService:
     def __init__(self, db: Session):
@@ -104,12 +105,24 @@ class BenchmarkService:
                 record_count=request.recordCount
             )
             
+            # Notify load phase complete
+            await manager.broadcast({
+                "type": "load_complete",
+                "message": f"Loading phase completed for {self.current_database}"
+            })
+            
             # Run benchmark phase with specific workload
             benchmark.run_benchmark(
                 operation_count=request.operationCount,
                 thread_count=request.threadCount,
                 workload_config=workload_config
             )
+            
+            # Notify benchmark phase complete
+            await manager.broadcast({
+                "type": "benchmark_complete",
+                "message": f"Benchmark phase completed for {self.current_database}"
+            })
             
             # Format metrics for the specific workload
             return self.format_metrics(benchmark, workload_config["name"])
@@ -118,7 +131,7 @@ class BenchmarkService:
             benchmark.cleanup()
 
     async def start_benchmark(self, request) -> Tuple[Dict, Dict]:
-        """Start the benchmark for both databases concurrently"""
+        """Start the benchmark for both databases synchronously"""
         if self.is_running:
             raise ValueError("Benchmark is already running")
         
@@ -132,13 +145,14 @@ class BenchmarkService:
             self.mongodb_benchmark = MongoDBBenchmark()
             self.couchbase_benchmark = CouchbaseBenchmark()
             
-            # Run benchmarks concurrently
-            self.current_database = "Both"
-            mongodb_task = asyncio.create_task(self.run_benchmark(self.mongodb_benchmark, request))
-            couchbase_task = asyncio.create_task(self.run_benchmark(self.couchbase_benchmark, request))
+            # Run benchmarks synchronously
+            self.current_database = "MongoDB"
+            mongodb_metrics = await self.run_benchmark(self.mongodb_benchmark, request)
             
-            # Wait for both benchmarks to complete
-            return await asyncio.gather(mongodb_task, couchbase_task)
+            self.current_database = "Couchbase"
+            couchbase_metrics = await self.run_benchmark(self.couchbase_benchmark, request)
+            
+            return mongodb_metrics, couchbase_metrics
             
         finally:
             self.is_running = False

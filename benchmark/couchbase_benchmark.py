@@ -16,9 +16,9 @@ class CouchbaseBenchmark:
         self.HOST = "127.0.0.1"
         self.BUCKET_NAME = "census"
         self.BUCKET_PASSWORD = "parola03"
-        self.RECORD_COUNT = 1000000
-        self.OPERATION_COUNT = 1000000
-        self.THREAD_COUNTS = [1, 2, 4]  # List of thread counts to test
+        self.RECORD_COUNT = 10000000
+        self.OPERATION_COUNT = 10000000
+        self.THREAD_COUNTS = [2]  # List of thread counts to test
 
         # Define workload configurations
         self.WORKLOADS = [
@@ -82,8 +82,9 @@ class CouchbaseBenchmark:
         self.bucket = None
         self.collection = None
 
-        # Create metrics directory if it doesn't exist
-        os.makedirs("metrics", exist_ok=True)
+        # Create metrics directories if they don't exist
+        os.makedirs("metrics2", exist_ok=True)
+        os.makedirs("load_metrics", exist_ok=True)
 
     def init_connection(self):
         """Initialize Couchbase connection"""
@@ -187,12 +188,14 @@ class CouchbaseBenchmark:
             if local_processed > 0:
                 self.update_progress(local_processed)
 
-        records_per_thread = self.RECORD_COUNT // self.THREAD_COUNTS[2]
+        # used_threads = self.THREAD_COUNTS[0]
+        used_threads = 4
+        records_per_thread = self.RECORD_COUNT // used_threads
         threads = []
 
-        for i in range(self.THREAD_COUNTS[2]):
+        for i in range(used_threads):
             start_record = i * records_per_thread
-            end_record = self.RECORD_COUNT if i == self.THREAD_COUNTS[2] - 1 else (i + 1) * records_per_thread
+            end_record = self.RECORD_COUNT if i == used_threads - 1 else (i + 1) * records_per_thread
             thread = threading.Thread(target=load_worker, args=(start_record, end_record))
             threads.append(thread)
             thread.start()
@@ -211,6 +214,27 @@ class CouchbaseBenchmark:
             self.RECORD_COUNT,
             self.insert_latencies
         )
+
+        # Save load metrics
+        load_metrics = {
+            "workload_name": "Load",
+            "thread_count": used_threads,
+            "record_count": self.RECORD_COUNT,
+            "operation_count": self.RECORD_COUNT,
+            "load_phase_time": self.load_phase_end_time - self.load_phase_start_time,
+            "insert_latencies": self.calculate_percentiles(self.insert_latencies),
+            "operation_counts": {
+                "insert": self.RECORD_COUNT,
+                "errors": self.error_counter
+            }
+        }
+
+        # Save to file in load_metrics directory
+        filename = f"load_metrics/{self.RECORD_COUNT}_couchbase_{used_threads}_Load.json"
+        with open(filename, "w") as f:
+            json.dump(load_metrics, f, indent=2)
+
+        print(f"\nLoad metrics have been saved to {filename}")
 
     def run_benchmark(self):
         """Run the benchmark operations for all workloads and thread counts"""
@@ -321,6 +345,7 @@ class CouchbaseBenchmark:
             "p50": latencies[int(len(latencies) * 0.50)],
             "p75": latencies[int(len(latencies) * 0.75)],
             "p90": latencies[int(len(latencies) * 0.90)],
+            "p95": latencies[int(len(latencies) * 0.95)],
             "p99": latencies[int(len(latencies) * 0.99)]
         }
 
@@ -347,7 +372,7 @@ class CouchbaseBenchmark:
         }
 
         # Save to file in metrics directory
-        filename = f"metrics/{self.RECORD_COUNT}_couchbase_{thread_count}_{workload_name}.json"
+        filename = f"metrics2/{self.RECORD_COUNT}_couchbase_{thread_count}_{workload_name}.json"
         with open(filename, "w") as f:
             json.dump(metrics, f, indent=2)
 
@@ -357,8 +382,8 @@ def main():
     benchmark = CouchbaseBenchmark()
     try:
         benchmark.init_connection()
-        # benchmark.load_data()
-        benchmark.run_benchmark()
+        benchmark.load_data()
+        # benchmark.run_benchmark()
     finally:
         benchmark.cleanup()
 

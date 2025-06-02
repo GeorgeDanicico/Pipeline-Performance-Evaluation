@@ -29,38 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# WebSocket connection manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: dict):
-        for connection in self.active_connections:
-            await connection.send_json(message)
-
-manager = ConnectionManager()
-
-# WebSocket endpoint
-@app.websocket("/api/ws/benchmark")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # Handle incoming messages if needed
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
-WEBSOCKET_URL = os.getenv("WEBSOCKET_URL", "ws://localhost:8080/benchmark/ws")
 
 WORKLOAD_MAPPING = {
     "WORKLOAD_A": {
@@ -208,25 +178,13 @@ async def run_benchmark(benchmark, request: BenchmarkRequest) -> Dict:
             thread_count=request.threadCount,
             record_count=request.recordCount
         )
-        
-        # Notify load phase complete
-        await manager.broadcast({
-            "type": "load_complete",
-            "message": f"Loading phase completed for {benchmark.__class__.__name__.replace('Benchmark', '')}"
-        })
-        
+
         # Run benchmark phase with specific workload
         benchmark.run_benchmark(
             operation_count=request.operationCount,
             thread_count=request.threadCount,
             workload_config=workload_config
         )
-        
-        # Notify benchmark phase complete
-        await manager.broadcast({
-            "type": "benchmark_complete",
-            "message": f"Benchmark phase completed for {benchmark.__class__.__name__.replace('Benchmark', '')}"
-        })
         
         # Format metrics for the specific workload
         return format_metrics(benchmark, workload_config["name"])

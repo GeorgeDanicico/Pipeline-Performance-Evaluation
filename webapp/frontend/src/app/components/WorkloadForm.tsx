@@ -102,7 +102,6 @@ export default function WorkloadForm() {
     } catch (error) {
       console.error('Error starting benchmark:', error);
       setError(error instanceof Error ? error.message : 'Failed to start benchmark');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -170,51 +169,12 @@ export default function WorkloadForm() {
           </Button>
         </Box>
       </Paper>
-      <WorkloadStatus isVisible={isLoading} />
-      {benchmarkResult && (
-        <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Benchmark Results
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography>
-              Workload: {benchmarkResult.workloadType.replace('_', ' ')}
-            </Typography>
-            <Typography>
-              Record Count: {benchmarkResult.recordCount}
-            </Typography>
-            <Typography>
-              Operation Count: {benchmarkResult.operationCount}
-            </Typography>
-            <Typography>
-              Thread Count: {benchmarkResult.threadCount}
-            </Typography>
-            {benchmarkResult.mongoMetrics && (
-              <>
-                <Typography variant="subtitle1" sx={{ mt: 2 }}>
-                  MongoDB Metrics:
-                </Typography>
-                <Box sx={{ pl: 2 }}>
-                  <Typography>Execution Time: {benchmarkResult.mongoMetrics.executionTime}ms</Typography>
-                  <Typography>Operations/sec: {benchmarkResult.mongoMetrics.executeOperationsPerSec.toFixed(2)}</Typography>
-                  <Typography>Memory Usage: {benchmarkResult.mongoMetrics.memoryUsage}MB</Typography>
-                </Box>
-              </>
-            )}
-            {benchmarkResult.couchbaseMetrics && (
-              <>
-                <Typography variant="subtitle1" sx={{ mt: 2 }}>
-                  Couchbase Metrics:
-                </Typography>
-                <Box sx={{ pl: 2 }}>
-                  <Typography>Execution Time: {benchmarkResult.couchbaseMetrics.executionTime}ms</Typography>
-                  <Typography>Operations/sec: {benchmarkResult.couchbaseMetrics.executeOperationsPerSec.toFixed(2)}</Typography>
-                  <Typography>Memory Usage: {benchmarkResult.couchbaseMetrics.memoryUsage}MB</Typography>
-                </Box>
-              </>
-            )}
-          </Box>
-        </Paper>
+      {isLoading && (
+        <WorkloadStatus 
+          isVisible={true} 
+          historyId={benchmarkResult?.id.toString()} 
+          isComplete={!!benchmarkResult}
+        />
       )}
       <Snackbar 
         open={!!error} 

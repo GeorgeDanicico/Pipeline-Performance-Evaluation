@@ -6,7 +6,6 @@ from database.models import BenchmarkResult
 from benchmark.mongodb_benchmark import MongoDBBenchmark
 from benchmark.couchbase_benchmark import CouchbaseBenchmark
 import asyncio
-from main import manager
 
 class BenchmarkService:
     def __init__(self, db: Session):
@@ -105,25 +104,13 @@ class BenchmarkService:
                 record_count=request.recordCount
             )
             
-            # Notify load phase complete
-            await manager.broadcast({
-                "type": "load_complete",
-                "message": f"Loading phase completed for {self.current_database}"
-            })
-            
             # Run benchmark phase with specific workload
             benchmark.run_benchmark(
                 operation_count=request.operationCount,
                 thread_count=request.threadCount,
                 workload_config=workload_config
             )
-            
-            # Notify benchmark phase complete
-            await manager.broadcast({
-                "type": "benchmark_complete",
-                "message": f"Benchmark phase completed for {self.current_database}"
-            })
-            
+
             # Format metrics for the specific workload
             return self.format_metrics(benchmark, workload_config["name"])
             

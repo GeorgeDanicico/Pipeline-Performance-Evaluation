@@ -1,5 +1,7 @@
 1 thread
 
+4mb
+
 === Load Phase Results ===
 Duration: 9.53 seconds
 Throughput: 1048.91 ops/sec
@@ -31,7 +33,7 @@ Max: 21.85
 
 Load phase completed.
 
-3 thread-uri
+4 thread-uri
 === Load Phase Results ===
 Duration: 2.59 seconds
 Throughput: 3867.35 ops/sec

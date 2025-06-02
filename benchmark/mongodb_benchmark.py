@@ -18,9 +18,9 @@ class MongoDBBenchmark:
         self.HOST = "127.0.0.1"
         self.DATABASE_NAME = "ycsb"
         self.COLLECTION_NAME = "usertable"
-        self.RECORD_COUNT = 10000
-        self.OPERATION_COUNT = 10000
-        self.THREAD_COUNTS = [1, 2, 4]  # List of thread counts to test
+        self.RECORD_COUNT = 10000000
+        self.OPERATION_COUNT = 10000000
+        self.THREAD_COUNTS = [2]  # List of thread counts to test
 
         # Define workload configurations
         self.WORKLOADS = [
@@ -78,14 +78,9 @@ class MongoDBBenchmark:
         self.db: Optional[Database] = None
         self.collection: Optional[Collection] = None
 
-        # Resource monitoring
-        self.cpu_usage = []
-        self.ram_usage = []
-        self.monitoring_thread = None
-        self.should_monitor = False
-
-        # Create metrics directory if it doesn't exist
-        os.makedirs("metrics", exist_ok=True)
+        # Create metrics directories if they don't exist
+        os.makedirs("metrics2", exist_ok=True)
+        os.makedirs("load_metrics", exist_ok=True)
 
     def init_connection(self):
         """Initialize MongoDB connection"""
@@ -121,49 +116,10 @@ class MongoDBBenchmark:
         else:
             print("\nNo operations performed in this phase")
 
-    def monitor_resources(self):
-        """Monitor CPU and RAM usage in a separate thread"""
-        process = psutil.Process()
-        while self.should_monitor:
-            self.cpu_usage.append(process.cpu_percent())
-            self.ram_usage.append(process.memory_info().rss / 1024 / 1024)  # Convert to MB
-            time.sleep(0.1)  # Sample every 100ms
-
-    def start_monitoring(self):
-        """Start resource monitoring"""
-        self.cpu_usage = []
-        self.ram_usage = []
-        self.should_monitor = True
-        self.monitoring_thread = threading.Thread(target=self.monitor_resources)
-        self.monitoring_thread.start()
-
-    def stop_monitoring(self):
-        """Stop resource monitoring"""
-        self.should_monitor = False
-        if self.monitoring_thread:
-            self.monitoring_thread.join()
-
-    def print_resource_metrics(self, phase_name: str):
-        """Print resource usage metrics for a phase"""
-        if not self.cpu_usage or not self.ram_usage:
-            return
-
-        print(f"\n=== {phase_name} Resource Usage ===")
-        print(f"CPU Usage:")
-        print(f"  Average: {statistics.mean(self.cpu_usage):.2f}%")
-        print(f"  Max: {max(self.cpu_usage):.2f}%")
-        print(f"  Min: {min(self.cpu_usage):.2f}%")
-        
-        print(f"\nRAM Usage:")
-        print(f"  Average: {statistics.mean(self.ram_usage):.2f} MB")
-        print(f"  Max: {max(self.ram_usage):.2f} MB")
-        print(f"  Min: {min(self.ram_usage):.2f} MB")
-
     def load_data(self):
         """Load initial data into MongoDB"""
         print("Starting load phase...")
         self.load_phase_start_time = time.time()
-        self.start_monitoring()
 
         def load_worker(start_record: int, end_record: int):
             for i in range(start_record, end_record):
@@ -189,12 +145,14 @@ class MongoDBBenchmark:
                     print(f"Error inserting record {key}: {e}")
                     self.error_counter += 1
 
-        records_per_thread = self.RECORD_COUNT // self.THREAD_COUNTS[0]
+        used_threads = 10
+
+        records_per_thread = self.RECORD_COUNT // used_threads
         threads = []
 
-        for i in range(self.THREAD_COUNTS[0]):
+        for i in range(used_threads):
             start_record = i * records_per_thread
-            end_record = self.RECORD_COUNT if i == self.THREAD_COUNTS[0] - 1 else (i + 1) * records_per_thread
+            end_record = self.RECORD_COUNT if i == used_threads - 1 else (i + 1) * records_per_thread
             thread = threading.Thread(target=load_worker, args=(start_record, end_record))
             threads.append(thread)
             thread.start()
@@ -203,7 +161,6 @@ class MongoDBBenchmark:
             thread.join()
 
         self.load_phase_end_time = time.time()
-        self.stop_monitoring()
         print("Load phase completed.")
         
         # Print load phase metrics
@@ -214,7 +171,27 @@ class MongoDBBenchmark:
             self.RECORD_COUNT,
             self.insert_latencies
         )
-        self.print_resource_metrics("Load")
+
+        # Save load metrics
+        load_metrics = {
+            "workload_name": "Load",
+            "thread_count": used_threads,
+            "record_count": self.RECORD_COUNT,
+            "operation_count": self.RECORD_COUNT,
+            "load_phase_time": self.load_phase_end_time - self.load_phase_start_time,
+            "insert_latencies": self.calculate_percentiles(self.insert_latencies),
+            "operation_counts": {
+                "insert": self.RECORD_COUNT,
+                "errors": self.error_counter
+            }
+        }
+
+        # Save to file in load_metrics directory
+        filename = f"load_metrics/{self.RECORD_COUNT}_mongodb_{used_threads}_Load.json"
+        with open(filename, "w") as f:
+            json.dump(load_metrics, f, indent=2)
+
+        print(f"\nLoad metrics have been saved to {filename}")
 
     def run_benchmark(self):
         """Run the benchmark operations for all workloads and thread counts"""
@@ -240,7 +217,6 @@ class MongoDBBenchmark:
                 self.scan_latencies = []
                 
                 self.run_phase_start_time = time.time()
-                self.start_monitoring()
 
                 def run_worker():
                     for _ in range(self.OPERATION_COUNT // thread_count):
@@ -286,7 +262,6 @@ class MongoDBBenchmark:
                     thread.join()
 
                 self.run_phase_end_time = time.time()
-                self.stop_monitoring()
                 print(f"\n{workload['name']} workload completed.")
 
                 # Print run phase metrics for this workload
@@ -311,8 +286,6 @@ class MongoDBBenchmark:
                 else:
                     print("\nNo update operations performed")
 
-                self.print_resource_metrics(f"{workload['name']} Run")
-
                 # Save metrics for this workload and thread count
                 self.save_metrics(workload['name'], thread_count)
 
@@ -329,6 +302,7 @@ class MongoDBBenchmark:
             "p50": latencies[int(len(latencies) * 0.50)],
             "p75": latencies[int(len(latencies) * 0.75)],
             "p90": latencies[int(len(latencies) * 0.90)],
+            "p95": latencies[int(len(latencies) * 0.95)],
             "p99": latencies[int(len(latencies) * 0.99)]
         }
 
@@ -351,23 +325,11 @@ class MongoDBBenchmark:
                 "insert": self.insert_counter,
                 "scan": self.scan_counter,
                 "errors": self.error_counter
-            },
-            "resource_usage": {
-                "cpu": {
-                    "average": statistics.mean(self.cpu_usage) if self.cpu_usage else 0,
-                    "max": max(self.cpu_usage) if self.cpu_usage else 0,
-                    "min": min(self.cpu_usage) if self.cpu_usage else 0
-                },
-                "ram": {
-                    "average": statistics.mean(self.ram_usage) if self.ram_usage else 0,
-                    "max": max(self.ram_usage) if self.ram_usage else 0,
-                    "min": min(self.ram_usage) if self.ram_usage else 0
-                }
             }
         }
 
         # Save to file in metrics directory
-        filename = f"metrics/{self.RECORD_COUNT}_mongodb_{thread_count}_{workload_name}.json"
+        filename = f"metrics2/{self.RECORD_COUNT}_mongodb_{thread_count}_{workload_name}.json"
         with open(filename, "w") as f:
             json.dump(metrics, f, indent=2)
 
